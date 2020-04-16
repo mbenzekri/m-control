@@ -6,6 +6,7 @@
         crossorigin="anonymous">
     <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
     <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
 </head>
 
 <body class=pure m-control="MCtrlExample">
@@ -54,7 +55,7 @@
         MControl.register(
 
             // create your controller
-            class MCtrlExample extends MControl.Example {
+            class MCtrlExample extends MControl.Controller {
 
                 constructor(element) {
                     // call super contsructor
@@ -79,7 +80,7 @@
                 }
             }
         )
-        MControl.start(document.body)
+        MControl.start()
 
     })
 </script>

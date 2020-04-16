@@ -6,6 +6,7 @@
         crossorigin="anonymous">
     <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
     <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
 </head>
 
 <body class=pure  m-control="MCtrlExample">
@@ -18,6 +19,38 @@
     <p>To bind a model property to an input element use the 'm-on:' modifier 
         followed by the property you want to bind.
     </p>
+
+    <fieldset>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+
+        <legend>The demo :</legend>
+        <div> My name is {{name}}</div>
+        <div> My preferred number is {{number}}</div>
+        <div> My preferred city is {{city}}</div>
+        <div> My prefered browser is  {{browser}} </div>
+
+        <fieldset>
+            <div m-ref=ex_html_a><label>Name : </label> <input  required m-bind:value="name" type="text" placeholder="Name"></div>
+            <div m-ref=ex_html_b><label>Number : </label><input m-bind:value="number" type="number" placeholder="Number"></div>
+            <div m-ref=ex_html_c>
+                <label>City : </label><input m-bind:value="city" type="text" placeholder="A city" list="cities">
+                <datalist id=cities>
+                    <option value="Paris">Paris</option>
+                    <option value="Tunis">Tunis</option>
+                    <option value="Rangoon">Rangoon</option>
+                </datalist>
+            </div>
+            <div m-ref=ex_html_d>
+                <label>Browser : </label><select m-bind:value=browser>
+                    <option value="Internet Explorer">Internet Explorer</option>
+                    <option value="Firefox">Firefox</option>
+                    <option value="Chrome">Chrome</option>
+                    <option value="Opera">Opera</option>
+                    <option value="Safari">Safari</option>
+                </select>
+            </div>
+        </fieldset>
+    </fieldset>
 
     <p>This example bind the model property '<strong>name</strong>' of the
         encompassing Controller with the '<strong>value</strong>' property 
@@ -43,44 +76,13 @@
 
 </pre>
 
-    <fieldset>
-        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
-
-        <legend>The demo :</legend>
-        <p> My name is {{name}}</p>
-        <p> My preferred number is {{number}}</p>
-        <p> My preferred city is {{city}}</p>
-        <p> My prefered browser is  {{browser}} </p>
-
-        <div>
-            <p m-ref=ex_html_a><input  required m-bind:value="name" type="text" placeholder="Name"></p>
-            <p m-ref=ex_html_b><input m-bind:value="number" type="number" placeholder="Number"></p>
-            <p m-ref=ex_html_c>
-                <input m-bind:value="city" type="text" placeholder="A city" list="cities">
-                <datalist id=cities>
-                    <option value="Paris">Paris</option>
-                    <option value="Tunis">Tunis</option>
-                    <option value="Rangoon">Rangoon</option>
-                </datalist>
-            </p>
-            <p m-ref=ex_html_d>
-                <select m-bind:value=browser>
-                    <option value="Internet Explorer">Internet Explorer</option>
-                    <option value="Firefox">Firefox</option>
-                    <option value="Chrome">Chrome</option>
-                    <option value="Opera">Opera</option>
-                    <option value="Safari">Safari</option>
-                </select>
-            </p>
-        </div>
-    </fieldset>
 </body>
 <script>
     window.addEventListener('load', _ => {
 
         MControl.register(
 
-            class MCtrlExample extends MControl.Example {
+            class MCtrlExample extends MControl.Controller {
 
                 constructor(element) {
                     super(element)
@@ -91,7 +93,7 @@
                 }
             }
         )
-        MControl.start(document.body)
+        MControl.start()
 
     })
 </script>

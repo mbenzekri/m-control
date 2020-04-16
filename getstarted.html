@@ -3,18 +3,123 @@
 <head>
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="./index.css">
+    <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
 </head>
 
-<body>
-    <h1>Get started<hr></h1>
-
-    <h2>Load m-control.js file</h2>
+<body class=pure m-control=HelloW>
+    <h1>Get started: Hello world !
+        <hr>
+    </h1>
+    <p>This tutorial will show how to start a very simple app with MC.
+        <ul>
+            <h3>The app will propose:</h3>
+            <li>a field to type your Name</li>
+            <li>a button to choose a random color</li>
+            <li>
+                <sc-t>div</sc-t> tag to feedback changes: saying colored hello 
+            </li>
+        </ul>
+    </p>
+    <h2>The living demo </h2>
+    <fieldset>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+        <div m-ref="ex_html_html">
+            Name : <input type="text" m-bind:value=name>
+            <button m-on:click="this.changeColor()">choose color</button>
+            <p m-ref=myelem>
+                Hello {{ name }} ! <br>
+                My prefered color is {{ color }}<br>
+            </p>
+        </div>
+        <script m-ref="ex_html_code">
+            window.addEventListener('load', _ => {
+                class HelloW extends MControl.Controller {
+                    constructor(...args) {
+                        super(...args)
+                        this.model.name = "Noa"
+                        this.model.color = "black"
+                    }
+                    changeColor() {
+                        const colors = ["silver", "gray", "black", "red", "maroon", "yellow", "olive", "lime", "green", "aqua", "teal", "blue", "navy", "fuchsia", "purple"]
+                        this.model.color = colors[Math.floor(colors.length * Math.random())]
+                        this.refs.myelem.style.color = this.model.color
+                    }
+                }
+                MControl.register(HelloW)
+                MControl.start()
+            })
+        </script>
+    </fieldset>
+    <!-- following HTML is only a description of the demo -->
+    <h2>Step by step ...</h2>
     <div class=mg-1>
-        <h3></h3>
+        <h3> The javascript code </h3>
         <p>First load MControl js script in your HTML &lt;head&gt;</p>
         <pre> &lt;script src="./m-control.js"&gt;&lt;/script&gt; </pre>
-    </div>
-    ... TO BE CONTINUED ...
 
+        <p>In a script tag create your MC controller class extending MControl.Controller</p>
+        <pre>{{ this.excerpt.ex_html_code}}</pre>
+        <ol>
+            <li>include your creationcode in a window 'load' event
+                <pre>window.addEventListener('load", _ => { ... } </pre>
+            </li>
+            <li>create your app Controller extending MControl.Controller base class
+                <pre>class HelloW extends MControl.Controller { ... } </pre>
+            </li>
+            <li>register your class nearby MControl framework
+                <pre>MControl.register(HelloW)</pre>
+            </li>
+            <li>bring your app to life calling MControl.start() (here we start all apps)
+                <pre>MControl.start(document.body)</pre>
+            </li>
+            <li>In your class provide a constructor, initialize your model.
+                model Controller property hold all dynamic value needed for your app behavior .
+                Here we initialize 'name' and 'color' properties
+
+                <pre>
+constructor(...args) {
+    super(...args)
+    this.model.name = "Noa"
+    this.model.color = "black"
+}
+            </pre>
+            </li>
+            <li>add method to be used by your event handler bindings. 
+                Here the method changes the 'color' dynamic property randomly.
+                Note that the method use a controller.refs property where dom
+                elements had been picked by 'm-ref' labelling (see below)
+                <pre>
+changeColor() {
+    const colors = ["silver", "gray", "black", "red", "maroon", "yellow", "olive", "lime", "green", "aqua", "teal", "blue", "navy", "fuchsia", "purple"]
+    this.model.color = colors[Math.floor(colors.length * Math.random())]
+    this.refs.myelem.style.color = this.model.color
+}
+                </pre>
+            </li>
+        </ol>
+    </div>
+    <h3> The HTML code </h3>
+    <div class=mg-1>
+        <p>The main HTML code for the demo is :</p>
+        <pre> {{ this.excerpt.ex_html_html }} </pre>
+        <ol>
+            <li>use 'm-bind:' modifier to associate property 'name' 
+                of the model's controller with the value property of
+                the input.
+                <pre><sc-t>input type="text" m-bind:value="name"</sc-t></pre>
+            </li>
+            <li>use 'm-on:' modifier to associate event 'click' 
+                of the controller's method call 'this->changeColor()'.
+                <pre><sc-t>button m-on:click="this.changeColor()"</sc-t>choose color<sc-t>/button</sc-t></pre>
+            </li>            
+            <li>use 'm-ref:' to have a dom element stored in 'refs' propperty
+                of the controller and use it in your code. Here we store the 
+                <sc-t>div</sc-t> tag to change the text color in our changeColor() 
+                method (see code above) of the controller's method call 'this.changeColor()'.
+                <pre><sc-t>button m-on:click="this.changeColor()"</sc-t>choose color<sc-t>/button</sc-t></pre>
+            </li>
+        </ol>
+    </div>
 </body>
 </html>
