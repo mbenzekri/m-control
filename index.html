@@ -1,0 +1,50 @@
+<html>
+
+<head>
+    <script src="./m-control.js"></script>
+    <link rel="stylesheet" href="./sidebar.css" crossorigin="anonymous">
+</head>
+
+<body m-control=SideMenu>
+    <!-- Side navigation -->
+    <div class="sidenav">
+        <h2>Summary
+            <hr>
+        </h2>
+        <h3 m-on:click="this.go($event)" _src="./intro.html">Introduction</h3>
+        <h3 m-on:click="this.go($event)" _src="./getstarted.html">Get started</h3>
+        <h3 m-on:click="this.go($event)" _src="./ex_interpolation.html">Examples</h3>
+        <ul>
+            <li m-on:click="this.go($event)" _src="./ex_interpolation.html">interpolation </li>
+            <li m-on:click="this.go($event)" _src="./ex_2wdbinding.html">to way data binding</li>
+            <li m-on:click="this.go($event)" _src="./ex_eventhandler.html">handling events</li>
+            <li m-on:click="this.go($event)">Item 4</li>
+            <li m-on:click="this.go($event)">Item 5</li>
+        </ul>
+        <hr>
+        <a href="#">Contact</a>
+    </div>
+
+    <!-- Page content -->
+    <div class="main">
+        <iframe width="100%" height="100%" frameBorder=0 src="./intro.html"></iframe>
+    </div>
+</body>
+<script>
+    MControl.register(
+        class SideMenu extends MControl.Controller {
+            init() {
+                this.iframe = this.element.getElementsByTagName('iframe')[0]
+            }
+            go(event) {
+                const elem = event.target
+                const location = elem.getAttribute('_src')
+                this.iframe.src = location
+            }
+        }
+    )
+    MControl.start(document.body)
+
+</script>
+
+</html>

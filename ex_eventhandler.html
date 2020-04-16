@@ -1,0 +1,73 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+</head>
+
+<body class=pure  m-control="MCtrlExample">
+
+
+    <h1> bind event handler to an HTML element
+        <hr>
+    </h1>
+    <p>In this example we bind the event type 'click' to the controller.inc() method
+        using 'm-on:' modifier followed by the event type.</p>
+
+    <pre>{{ this.excerpt.ex_html_a}}</pre>
+    
+    <p>this example bind the event types 'click' and 'keyup' to the controller.dec()
+    method. The event object is passed through the $event variable</p>
+    
+    <pre>{{ this.excerpt.ex_html_b}}</pre>
+
+    <fieldset>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+
+        <legend>The demo :</legend>
+        <p> My preferred number is : {{number}}</p>
+        <div>
+            <span m-ref="ex_html_a">
+                <input m-on:click="this.inc()" type="button" value="More" class="pure-button pure-button-primary">
+            </span>
+            or
+            <span m-ref="ex_html_b">
+                <input m-on:click|keyup="this.dec($event)" type="button" value="Less" class="pure-button pure-button-primary">
+            </span>
+        </div>
+    </fieldset>
+
+    <p>Methods for incrementing and decrementing are quite simple.</p>
+    <pre m-ref="ex_code_inc">{{ this.excerpt.ex_code_inc}}</pre>
+    <pre m-ref="ex_code_inc">{{ this.excerpt.ex_code_inc}}</pre>
+</body>
+<script>
+    window.addEventListener('load', _ => {
+
+        // register your created controller
+        MControl.register(
+
+            // create your controller
+            class MCtrlExample extends MControl.Example {
+
+                constructor(element) {
+                    super(element)
+                    this.model.number = 12
+                }
+                inc() {
+                    this.model.number++
+                }
+                dec() {
+                    this.model.number++
+                }
+            }
+        )
+        MControl.start(document.body)
+
+    })
+</script>
+
+</html>

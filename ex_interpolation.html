@@ -1,0 +1,87 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+</head>
+
+<body class=pure m-control="MCtrlExample">
+    <h1>Example: interpolated <sc-i>expression</sc-i>
+        <hr>
+    </h1>
+
+    <p>Insert a double curly braquet in your HTML text node to display a dynamicly
+        evaluated
+        javascript expression.
+        This expression is evaluated in a context where :
+        <ul>
+            <li>all model properties are binded to local variable (same name) </li>
+            <li>this is binded to the encompassing Controller</li>
+        </ul>
+    </p>
+    
+    <p style="background-color:peachpuff;">
+        <strong>IMPORTANT: Only changes to the model properties produce a refresh of the interpolated texts.</strong><br>
+        Therefore put your dynamic properties in this.model.<br>
+        Dont forget to call firt super class to manage correctly parent class behavior.
+    </p>
+
+    <fieldset>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+        <legend>The demo :</legend>
+        <div m-ref=ex_html_inter>
+            My name is {{ name }}. My prefered color is {{ color }} <br>
+            My magic number is {{ number  * this.coeff }}
+        </div>
+    </fieldset>
+
+    <p>You can see in the following code we are using name, color and number model properties.
+        You can also access your controller object using by usin 'this' context. </p>
+    <pre>{{ this.excerpt.ex_html_inter}}</pre>
+
+    <p>In Controller.init() hook start interval to update model color attribute.
+        You can see dynamic refreshing of the document.</p>
+    <pre m-ref="ex_code_init">{{ this.excerpt.ex_code_init }}</pre>
+
+</body>
+<script>
+    window.addEventListener('load', _ => {
+
+        // register your created controller
+        MControl.register(
+
+            // create your controller
+            class MCtrlExample extends MControl.Example {
+
+                constructor(element) {
+                    // call super contsructor
+                    // !! dont forget to add a property name model  list 
+                    // !! if all properties are not initialied in constructor
+                    // because dynamic properties are all to be known at init step 
+                    super(element)
+                    // initialize model (dynamic properties)
+                    this.model.name = "Noa"
+                    this.model.color = "red"
+                    this.model.number = 12
+                    // initialize Controller internal data
+                    this.colors = ['red', 'green', 'blue', 'yellow', 'grey', 'white', 'black', 'purple']
+                    this.coeff = 10
+                }
+                init() {
+                    super.init()
+                    setInterval(_ => {
+                        const index = Math.floor(this.colors.length * Math.random())
+                        this.model.color = this.colors[index]
+                    }, 400)
+                }
+            }
+        )
+        MControl.start(document.body)
+
+    })
+</script>
+
+</html>

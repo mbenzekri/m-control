@@ -1,0 +1,99 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+</head>
+
+<body class=pure  m-control="MCtrlExample">
+
+    <h1>
+        <sc-t>input</sc-t> element with two way data binding
+        <hr>
+    </h1>
+
+    <p>To bind a model property to an input element use the 'm-on:' modifier 
+        followed by the property you want to bind.
+    </p>
+
+    <p>This example bind the model property '<strong>name</strong>' of the
+        encompassing Controller with the '<strong>value</strong>' property 
+        of the input element.
+    </p>
+
+    <pre>{{this.excerpt.ex_html_a}}</pre>
+
+    <p>this one bind the model property '<strong>number</strong>' with
+        the '<strong>value</strong>' property of the input element.</p>
+
+    <pre>{{this.excerpt.ex_html_b}}</pre>
+
+    <p>this one bind the model property '<strong>city</strong>' with
+        the '<strong>value</strong>' property of the input element having a datalist
+    </p>
+    <pre>{{this.excerpt.ex_html_c}}</pre>
+
+    <p>this one bind the model property '<strong>browser</strong>' with
+        the '<strong>value</strong>' property of the select element 
+    </p>
+    <pre>{{this.excerpt.ex_html_d}}</pre>
+
+</pre>
+
+    <fieldset>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+
+        <legend>The demo :</legend>
+        <p> My name is {{name}}</p>
+        <p> My preferred number is {{number}}</p>
+        <p> My preferred city is {{city}}</p>
+        <p> My prefered browser is  {{browser}} </p>
+
+        <div>
+            <p m-ref=ex_html_a><input  required m-bind:value="name" type="text" placeholder="Name"></p>
+            <p m-ref=ex_html_b><input m-bind:value="number" type="number" placeholder="Number"></p>
+            <p m-ref=ex_html_c>
+                <input m-bind:value="city" type="text" placeholder="A city" list="cities">
+                <datalist id=cities>
+                    <option value="Paris">Paris</option>
+                    <option value="Tunis">Tunis</option>
+                    <option value="Rangoon">Rangoon</option>
+                </datalist>
+            </p>
+            <p m-ref=ex_html_d>
+                <select m-bind:value=browser>
+                    <option value="Internet Explorer">Internet Explorer</option>
+                    <option value="Firefox">Firefox</option>
+                    <option value="Chrome">Chrome</option>
+                    <option value="Opera">Opera</option>
+                    <option value="Safari">Safari</option>
+                </select>
+            </p>
+        </div>
+    </fieldset>
+</body>
+<script>
+    window.addEventListener('load', _ => {
+
+        MControl.register(
+
+            class MCtrlExample extends MControl.Example {
+
+                constructor(element) {
+                    super(element)
+                    this.model.name = "Noa"
+                    this.model.number = 12
+                    this.model.city = null
+                    this.model.browser = null
+                }
+            }
+        )
+        MControl.start(document.body)
+
+    })
+</script>
+
+</html>
