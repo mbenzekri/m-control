@@ -1,0 +1,75 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
+</head>
+
+<body class=pure m-control="MCtrlExample">
+
+    <h1>Labeling tags to collect and use dom elements
+        <hr>
+    </h1>
+
+    <p>To collect and use a dom element inyour controller label it with a "m-ref" attribute providing a name.
+        For instance m-ref="elem1" will be accessible through "refs" controller's property
+        like : this.refs.elem1.
+    </p>
+
+    <fieldset>
+        <legend>The demo :</legend>
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+        <div m-ref="ex_html_a">
+            <div m-ref="elem1"> I am the first element </div>
+            <div m-ref="elem2"> I am the second element </div>
+            <div m-ref="elem3"> I am the third element </div>
+            <label>Choose element : </label><select m-bind:value=selected>
+                <option value="elem1">First</option>
+                <option value="elem2">Second</option>
+                <option value="elem3">Third</option>
+            </select>
+            <input m-on:click="this.changeColor()" type="button" class="pure-button" value="Change color">
+        </div>
+        <script m-ref="ex_code_changeColor">
+            window.addEventListener('load', _ => {
+                class MCtrlExample extends MControl.Controller {
+                    constructor(element) {
+                        super(element)
+                        this.model.selected = 'elem1'
+                    }
+                    changeColor() {
+                        const colors = ["silver", "gray", "black", "red", "maroon", "yellow", "olive", "lime", "green", "aqua", "teal", "blue", "navy", "fuchsia", "purple"]
+                        const color = colors[Math.floor(colors.length * Math.random())]
+                        this.refs[this.model.selected].style.color = color
+                    }
+                }
+                MControl.register(MCtrlExample)
+                MControl.start()
+            })
+        </script>
+    </fieldset>
+
+    <p>To collect and use a dom element in your controller label it with a "m-ref" attribute providing a name.
+        For instance m-ref="elem1" will be accessible through "refs" controller's property
+        like : this.refs.elem1.
+    </p>
+    <ol>
+        <li>
+            the three divs are labeled to be collected in 'refs' controllers
+            property and select input offers a choice between this three elements.
+            <pre>{{ this.excerpt.ex_html_a }}</pre>
+        </li>
+        <li> controller 'changeColor()' method set the color in the selected 
+            element using the appropriate 'refs' property using 'selected' dynamic 
+            property. 
+            <pre>{{ this.excerpt.ex_code_changeColor }}</pre>
+        </li>
+    </ol>
+</body>
+
+
+</html>
