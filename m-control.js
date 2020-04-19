@@ -63,7 +63,7 @@
             // --- Creation phase in controller lifecycle
 
             elems.forEach(elem => {
-                const appelems = m_controls(elem, ctrls)
+                const appelems = this.controls(elem, ctrls)
                 appelems.forEach(appelem => {
                     const ctrlname = appelem.getAttribute('m-control')
                     if (!ctrlname) return
@@ -86,14 +86,29 @@
             this.outdated = new Map()
             requestAnimationFrame(_ => this.mrefreshloop());
         }
+        /**
+         * collect end return nodes having 'm-control' attribute
+         * @param {HTMLElement} elem : root dom element to start search
+         * @param {Controller[]} ctrlclasses : controller class list to filer search
+         * @return {HTMLElement[]} node list found
+         */
+        controls(elem, ctrlclasses) {
+            const ctrls = []
+            const attr = elem.getAttribute('m-control')
+            const selector = ctrlclasses.length ? ctrlclasses.map(ctrlclass => `[m-control="${ctrlclass.name}"]`).join(',') : '[m-control]'
+            ctrlclasses.forEach(ctrlclass => (ctrlclass.name === attr) && ctrls.push(elem))
+            elem.querySelectorAll(selector).forEach(elem => ctrls.push(elem))
+            return ctrls;
+        }
     }
+
     // javascript reserved word are forbidden property names 
-    const reserved = [ 
-        'do','if','in','for','let','new','try','var','case','else','enum','eval','null','this','true','void','with','await',
-        'break','catch','class','const','false','super','throw','while','yield','delete','export','import','public','return',
-        'static','switch','typeof','default','extends','finally','package','private','continue','debugger','function',
-        'arguments','interface','protected','implements','instanceof']
-        .reduce((p,k) => {p[k] = 1; return p} ,{})
+    const reserved = [
+        'do', 'if', 'in', 'for', 'let', 'new', 'try', 'var', 'case', 'else', 'enum', 'eval', 'null', 'this', 'true', 'void', 'with', 'await',
+        'break', 'catch', 'class', 'const', 'false', 'super', 'throw', 'while', 'yield', 'delete', 'export', 'import', 'public', 'return',
+        'static', 'switch', 'typeof', 'default', 'extends', 'finally', 'package', 'private', 'continue', 'debugger', 'function',
+        'arguments', 'interface', 'protected', 'implements', 'instanceof']
+        .reduce((p, k) => { p[k] = 1; return p }, {})
 
     class Controller {
         debug = true
@@ -126,31 +141,39 @@
             }
             closure()
         }
+
         get propnames() {
             return this.model ? Object.keys(this.model) : {}
         }
-        $build() {
-            m_compile_refs(this)
-            m_compile_texts(this)
-            m_compile_events(this)
-            m_compile_bindings(this)
-            m_compile_classes(this)
-            m_compile_styles(this)
 
-        }
-        $from_input_to_model(nodeprop, event, modelprop) {
-            const value = (event.target.type === 'number') ? (event.target[nodeprop] === '') ? 0 : parseFloat(event.target[nodeprop]) : event.target[nodeprop]
-            //console.log(`input => model with model=${this.model[modelprop]}  input=${event.target[nodeprop] }`)
-            this.model[modelprop] = value
-            event.target.$mversion = this.modelvers[modelprop]
-        }
-        $from_model_to_input(modelprop, node, nodeprop) {
-            if (!node.$mversion || node.$mversion < this.modelvers[modelprop]) {
-                //console.log(`model => input with model=${this.model[modelprop]}  input=${node[nodeprop]}`)
-                node[nodeprop] = this.model[modelprop]
-                node.$mversion = this.modelvers[modelprop]
+        $build() {
+            const collected = []
+            // collect the items to compile
+            for (let elem of this.element.querySelectorAll("*")) {
+                for (let text of elem.childNodes) {
+                    if (text.nodeType !== Node.TEXT_NODE || !text.textContent.includes('{{')) continue
+                    collected.push({ type: 'm-text', elem, attr: text })
+                }
+                for (let attr of elem.attributes) {
+                    if(!attr.name.startsWith('m-')) continue
+                    const type = attr.name.replace(/:.*/, '')
+                    if (!(type in compile)) continue
+                    collected.push({ type, elem, attr })
+                }
+            }
+            // compile colledted items
+            for (let opts of collected) {
+                const params = compile[opts.type](this, opts.elem, opts.attr)
+                try {
+                    if (!params) continue
+                    opts.attr.$mrender = new Function(...params)
+                    this.renderlist.push(opts.attr)
+                } catch (e) {
+                    this.$error(`during build for ${opts.type} compile/bindings`, e, opts.elem)
+                }
             }
         }
+
         /**
          * @param {string|HTMLElement|Node|} a 
          * @param {*} b 
@@ -162,11 +185,11 @@
             const node = args.find(a => a instanceof Node)
             const error = args.find(a => a instanceof Error) || new Error()
             const message = args.find(a => typeof a === 'string')
-            console.error(`MControl error  ${message || ''}` 
-            +`${ element ? '\n@elem: ' + element.outerHTML.substr(0, 50) : ''}`
-            +`${ node ? '\n@node: ' + node.textContent.substr(0, 50) : ''}`
-            +`${ (error && !error.stack) ? '\n@error: ' + error.message : ''}`
-            +`${ (error && error.stack) ? '\n@error: ' + error.stack : ''}`)
+            console.error(`MControl error  ${message || ''}`
+                + `${element ? '\n@elem: ' + element.outerHTML.substr(0, 50) : ''}`
+                + `${node ? '\n@node: ' + node.textContent.substr(0, 50) : ''}`
+                + `${(error && !error.stack) ? '\n@error: ' + error.message : ''}`
+                + `${(error && error.stack) ? '\n@error: ' + error.stack : ''}`)
         }
         start(element) {
             this.element = element
@@ -201,278 +224,89 @@
             }
             MC.outdated.get(this)[property]++
         }
-
     }
-
 
     // ---------------------------------
     // INTERNAL FUNCTION 
     // ---------------------------------
-    /**
-     * collect end return nodes having 'm-control' attribute
-     * @param {HTMLElement} elem : root dom element to start search
-     * @param {Controller[]} ctrlclasses : controller class list to filer search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_controls(elem, ctrlclasses) {
-        const ctrls = []
-        const attr = elem.getAttribute('m-control')
-        const selector = ctrlclasses.length ? ctrlclasses.map(ctrlclass => `[m-control="${ctrlclass.name}"]`).join(',') : '[m-control]'
-        ctrlclasses.forEach(ctrlclass => (ctrlclass.name === attr) && ctrls.push(elem))
-        elem.querySelectorAll(selector).forEach(elem => ctrls.push(elem))
-        return ctrls;
-    }
 
     /**
-     * collect end return nodes having 'm-ref' attribute
+     * Parse a HTML DOM tree to collect and managed attributes (m-ref, m-class)
+     * compile rendering functions and add listener bindings  
      * @param {HTMLElement} elem root dom element to start search
      * @return {HTMLElement[]} node list found
      */
-    function m_references(elem) {
-        const refs = elem.getAttribute('m-ref') ? [elem] : []
-        elem.querySelectorAll("[m-ref]").forEach(elem => refs.push(elem))
-        return refs
-    }
-
-    /**
-     * collect end return nodes having 'm-class' attribute
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_classes(elem) {
-        const classes = elem.getAttributeNode('m-class') ? [elem.getAttributeNode('m-class')] : []
-        elem.querySelectorAll("[m-class]").forEach(elem => classes.push(elem.getAttributeNode('m-class')))
-        return classes
-    }
-
-    /**
-     * collect end return nodes having 'm-style' attribute
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_styles(elem) {
-        const styles = []
-        const nodes = elem.querySelectorAll("*")
-        nodes.forEach(
-            node => [...node.attributes].forEach(
-                attr => attr.nodeName.startsWith("m-style:") && styles.push(attr)
-            )
-        )
-        return styles
-    }
-
-    /**
-     * collect end return text nodes containing interpoations {{ ...expr... }}
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_interpolated(elem) {
-        var texts = [];
-        const filter = child => child.nodeType == 3 && child.textContent.includes('{{') && texts.push(child)
-        elem.childNodes.forEach(filter)
-        elem.querySelectorAll("*").forEach(node => node.childNodes.forEach(filter))
-        return texts
-    }
-
-    /**
-     * collect end return having 'm-on:' modifier fr event bindings
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_events(elem) {
-        const attrs = []
-        const nodes = elem.querySelectorAll("*")
-        nodes.forEach(
-            node => [...node.attributes].forEach(
-                attr => attr.nodeName.startsWith("m-on:") && attrs.push(attr)
-            )
-        )
-        return attrs
-    }
-
-    /**
-     * collect end return having 'm-bind:' modifier fr event bindings
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
-    function m_bindings(elem) {
-        const binds = []
-        const nodes = elem.querySelectorAll("*")
-        nodes.forEach(
-            node => [...node.attributes].forEach(
-                attr => attr.nodeName.startsWith("m-bind:") && binds.push(attr)
-            )
-        )
-        return binds
-    }
-
-    /**
-     * Build-phase : pick every m-ref attribute to populate Controller.refs[] array 
-     * property with corresponding elements for futur use.
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_refs(ctrl) {
-        const reflist = m_references(ctrl.element)
-        reflist.forEach(node => {
-            const refname = node.getAttribute('m-ref')
-            ctrl.refs[refname] = node
-        })
-    }
-
-    /**
-     * compile text node renderers declared with '{{ ...js expression...}}' syntax
-     * execution context is:
-     * - $node is binded to the text node 
-     * - this is binded to controller
-     * - all model properties are binded to their name
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_texts(ctrl) {
-        // first argument is target Node element
-        // folowwed by all model property names
-        // finally the rendering code for rendeing function
-        const params = ['$node', '$text', ...ctrl.propnames, 'return null']
-        const ibody = params.length - 1
-
-        // compiling text interpolation chunks
-        m_interpolated(ctrl.element).forEach(text => {
-            const body = [
-                '$text.textContent = `',
-                text.textContent.replace(/{{/g, '${').replace(/}}/g, '}'),
-                '`'
-            ].join('')
-            params[ibody] = body
-            try {
-                text.$mrender = new Function(...params)
-                ctrl.renderlist.push(text)
-            } catch (e) {
-                ctrl.$error(`during build for interpolated nodes`, e, text)
-            }
-        })
-    }
-
-    /**
-     * compile event bindings declared with m-on: modifier
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_events(ctrl) {
-        // compiling event binding with m-on:
-        m_events(ctrl.element).forEach(attr => {
-            const elem = attr.ownerElement
-            const body = attr.textContent.replace(/{{|}}/g, '')
+    const compile = {
+        'm-ref': (ctrl, elem, attr) => {
+            ctrl.refs[attr.value] = elem;
+            return null
+        },
+        'm-class': (ctrl, elem, attr) => {
+            const body = ` 
+                if (${attr.value}) Object.keys(${attr.value}).forEach(classname =>
+                    ${attr.value}[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
+                ) 
+            `
+            const params = ['$node', '$attr', ...ctrl.propnames, body]
+            return params
+        },
+        'm-style': (ctrl, elem, attr) => {
+            const styleprop = attr.name.replace(/m-style:/, '')
+            const body = `$node.style['${styleprop}'] = \`${attr.value}\``
+            return ['$node', '$attr', ...ctrl.propnames, body]
+        },
+        'm-on': (ctrl, elem, attr) => {
             const evtnames = attr.name.replace(/m-on:/, '').split('|')
+            const body = attr.value
             try {
                 const func = new Function('$event', body).bind(ctrl)
                 evtnames.forEach(evtname => elem.addEventListener(evtname, func))
             } catch (e) {
                 ctrl.$error(`during build for event ${attr.name} binding`, e, elem)
             }
-        })
-    }
-    /**
-     * compile properties bindings declared with m-bind: modifier
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_bindings(ctrl) {
-        // standard rendering parameters ($node,p1,p2,...,body)
-        // first argument is target Node element
-        // folowwed by all model property names
-        // finally the rendering code for rendeing function
-        const params = ['$node', '$attr', ...ctrl.propnames, 'return null']
-        const ibody = params.length - 1
+            return null
+        },
+        'm-text': (ctrl, elem, text) => {
+            const body = ` $text.textContent = \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\``
+            return ['$node', '$text', ...ctrl.propnames, body]
+        },
+        'm-bind': (ctrl, elem, attr) => {
+            const attrname = attr.name.replace(/m-bind:/, '')
+            const proppath = attr.value
+            const property = proppath.replace(/(\.|\[).*/, '')
 
-        // get all m-bind modifier
-        m_bindings(ctrl.element)
-            .forEach(attr => {
-                const elem = attr.ownerElement
-                const attrname = attr.name.replace(/m-bind:/, '')
-                const proppath = attr.value
-                const property = proppath.replace(/(\.|\[).*/,'')
-                if (ctrl.propnames.find(v => v === property)) {
-                    // create binding from model to input
-                    // ----------------------------------
-                    params[ibody] = `
-                        if (!$node.$mversion || $node.$mversion < this.modelvers['${property}']) {
-                            if (this.debug) console.log(\`model => input with model.${proppath}=\${JSON.stringify(this.model.${proppath})}  input[\${$node.type}]=\${$node['${attrname}']}\`)
-                            $node['${attrname}'] = this.model.${proppath}
-                            $node.$mversion = this.modelvers['${property}']
-                        }
-                    `
-                    try {
-                        attr.$mrender = new Function(...params)
-                        ctrl.renderlist.push(attr)
-                    } catch (e) {
-                        ctrl.$error(`during build for '${attr.name}' binding`, e, elem)
-                    }
+            // property must be present in model
+            if (!ctrl.propnames.find(v => v === property)) return ctrl.$error(`during build for '${attr.name}' unknown binding`, elem)
 
-                    // create binding from input to model
-                    // ----------------------------------
-                    try {
-                        const body = `
-                            const value = ($event.target.type === 'number') ? ($event.target['${attrname}'] === '') ? 0 : parseFloat($event.target['${attrname}']) : $event.target['${attrname}']
-                            if (this.debug) console.log(\`input => model with model.${proppath}=\${JSON.stringify(this.model.${proppath})} input=\${ $event.target['${attrname}'] }\`)
-                            this.model.${proppath} = value
-                            this.model['${property}'] = this.model['${property}'] 
-                            $event.target.$mversion = this.modelvers['${property}']            
-                        `
-                        const func = new Function('$event', body).bind(ctrl)
-                        elem.addEventListener('change', func)
-                        elem.addEventListener('input', func)
-                        elem.addEventListener('paste', func)
-                    } catch (e) {
-                        ctrl.$error(`during build for '${attr.name}' binding`, e, elem)
-                    }
-                } else {
-                    ctrl.$error(`during build for '${attr.name}' unknown binding`, elem)
-                }
-            })
-    }
-
-    /**
-     * compile class bindings declared with m-class atribute
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_classes(ctrl) {
-        const params = ['$node', '$attr', ...ctrl.propnames, 'return null']
-        const ibody = params.length - 1
-        // get all m-bind modifier
-        m_classes(ctrl.element)
-            .forEach(attr => {
-                const elem = attr.ownerElement
-                const property = elem.getAttribute('m-class')
-                params[ibody] = ` 
-                    if (${property}) Object.keys(${property}).forEach(classname =>
-                        ${property}[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
-                    ) 
+            // create binding from input to model
+            // ----------------------------------
+            try {
+                const body = `
+                    const value = ($event.target.type === 'number') ? ($event.target['${attrname}'] === '') ? 0 : parseFloat($event.target['${attrname}']) : $event.target['${attrname}']
+                    if (this.debug) console.log(\`input => model with model.${proppath}=\${JSON.stringify(this.model.${proppath})} input=\${ $event.target['${attrname}'] }\`)
+                    this.model.${proppath} = value
+                    this.model['${property}'] = this.model['${property}'] 
+                    $event.target.$mversion = this.modelvers['${property}']            
                 `
-                try {
-                    attr.$mrender = new Function(...params)
-                    ctrl.renderlist.push(attr)
-                } catch (e) {
-                    ctrl.$error(`during build for m-class bindings`, e, attr.ownerElement)
-                }
-            })
-    }
+                const func = new Function('$event', body).bind(ctrl)
+                elem.addEventListener('change', func)
+                elem.addEventListener('input', func)
+                elem.addEventListener('paste', func)
+            } catch (e) {
+                ctrl.$error(`during build for '${attr.name}' binding`, e, elem)
+            }
 
-    /**
-     * compile style bindings declared with m-style atribute
-     * @param {Controller} ctrl target controller 
-     */
-    function m_compile_styles(ctrl) {
-        const params = ['$node', '$attr', ...ctrl.propnames, 'return null']
-        const ibody = params.length - 1
-        // get all m-bind modifier
-        m_styles(ctrl.element)
-            .forEach(attr => {
-                const styleprop = attr.name.replace(/m-style:/, '')
-                params[ibody] = `$node.style['${styleprop}'] = \`${attr.textContent}\``
-                try {
-                    attr.$mrender = new Function(...params)
-                    ctrl.renderlist.push(attr)
-                } catch (e) {
-                    ctrl.$error(`during build for m-style bindings`, e, attr.ownerElement)
+            // create binding from model to input
+            // ----------------------------------
+            const body = `
+                if (!$node.$mversion || $node.$mversion < this.modelvers['${property}']) {
+                    if (this.debug) console.log(\`model => input with model.${proppath}=\${JSON.stringify(this.model.${proppath})}  input[\${$node.type}]=\${$node['${attrname}']}\`)
+                    $node['${attrname}'] = this.model.${proppath}
+                    $node.$mversion = this.modelvers['${property}']
                 }
-            })
+            `
+            return ['$node', '$attr', ...ctrl.propnames, body]
+        }
     }
 
     // create MC singleton
