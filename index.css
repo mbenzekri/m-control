@@ -1,14 +1,3 @@
-.ok {
-    color: green;
-}
-
-.ko {
-    color: red;
-}
-
-td {
-    padding: 5px
-}
 
 pre {
     margin-left: 50px;
@@ -30,22 +19,6 @@ pre {
     padding-left: 60px;
 }
 
-.menu {
-    background-color: black;
-    color: grey;
-    display: inline-block;
-}
-
-.header {
-    padding: 10px;
-}
-
-.dynamic {
-    padding: 5px;
-    background-color: lightskyblue;
-    border-radius: 5px;
-}
-
 sc-i::before {
     content: "{{";
 }
@@ -61,4 +34,7 @@ sc-t::after {
 p {
     text-align: justify; 
     padding: 5px;
+}
+h1, h2, h3 {
+    color: rgb(25, 118, 210);
 }

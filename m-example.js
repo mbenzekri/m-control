@@ -14,7 +14,7 @@ function fixindent(code) {
     return code.join('\n')
 }
 // for the demo we extends the Controller class by
-MControl.Controller = class Example extends MControl.Controller {
+MC.Controller = class Example extends MC.Controller {
     constructor(element,properties) {
         super(element,properties)
         this.excerpt={}

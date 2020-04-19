@@ -1,0 +1,108 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
+</head>
+
+<body class=pure>
+
+    <h1>CSS class and style bindings 
+        <hr>
+    </h1>
+
+    <p>To update dynamicly nodes class and style properties use respectively 'm-class' and 'm-style' 
+        MC attributte.
+    </p>
+    <p>'m-style' value must respect the following pattern : 
+        <pre>m-style:<strong>styleprop</strong>="..${<strong>expr1</strong>}..." </pre>
+        where :
+        <ul>
+            <li>styleprop : is a style property name ('color', 'background-color', ...)</li>
+            <li>expr<sub>i</sub> : is a javascript expression usinc controller's dynamic property</li>
+            <li> ... : is your static text  surrounding the expressions</li>
+        </ul>
+        <pre>m-style:color="rgb( ${r} , ${g} , ${b} )" </pre>
+        <pre>m-style:width="${ mywidth }px" </pre>
+    </p>
+
+    <fieldset  m-control="MCtrlExample">
+        <legend>The demo :</legend>
+        <input m-on:click="this.code()" type=button value="see code">
+        <div>
+            <p><label>Choose text alignement : </label><select m-bind:value=align>
+                <option value="center">center</option>
+                <option value="left">left</option>
+                <option value="right">right</option>
+            </select></p>
+            <p><label>Color : </label>
+            red <input type="range"  min="0" max="255" m-bind:value="r">
+            green <input type="range"  min="0" max="255" m-bind:value="g">
+            blue <input type="range"  min="0" max="255" m-bind:value="b">
+            </p>
+            <div m-style:text-align="${align}" m-style:color="rgb(${r},${g},${b})" style="padding: 5px;border: 1px solid black;"> 
+                <strong>Color me ! I my text is "{{ align }}" aligned  !!!</strong>
+            </div>
+            <style>
+                .redleft {
+                    text-align: left;
+                    color: red;
+                }
+                .greencenter {
+                    text-align: center;
+                    color: green;
+                }
+                .blueright {
+                    text-align: right;
+                    color: blue;
+                }
+            </style>
+            <p><label>Choose CSS class : </label>
+            <fieldset>
+                <input type="radio" name="drone" m-on:click="this.changeClass('redleft')" checked> red & left <br>
+                <input type="radio" name="drone" m-on:click="this.changeClass('greencenter')" > green &  center  <br>
+                <input type="radio" name="drone" m-on:click="this.changeClass('blueright')" > blue & right <br>
+            </fieldset></p>
+            <div m-class="classobj" style="padding: 5px;border: 1px solid black;"> <strong>
+                I am actually '{{ 
+                    classobj.redleft ? 'red and left' : (classobj.greencenter ? 'green and center' : 'blue and right')
+                }}'<br>
+                Choose my class !!! 
+            </strong></div>
+        </div>
+        <script>
+            window.addEventListener('load', _ => {
+                class MCtrlExample extends MC.Controller {
+                    constructor() {
+                        super()
+                        this.model.align = 'center'
+                        this.model.r = 128
+                        this.model.g = 128
+                        this.model.b = 128
+                        this.model.classobj = {
+                            redleft : true,
+                            greencenter : false,
+                            blueright : false,
+                        }
+                    }
+                    changeClass(newclass) {
+                        Object.keys(this.model.classobj).forEach(classname => {
+                            this.model.classobj[classname] = (newclass === classname)
+                        })
+                        this.outdate('model.classobj')
+                    }
+                }
+                MControl.register(MCtrlExample)
+                MControl.start()
+            })
+        </script>
+    </fieldset>
+
+</body>
+
+
+</html>

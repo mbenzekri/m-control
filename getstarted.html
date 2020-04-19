@@ -34,7 +34,7 @@
         </div>
         <script m-ref="ex_html_code">
             window.addEventListener('load', _ => {
-                class HelloW extends MControl.Controller {
+                class HelloW extends MC.Controller {
                     constructor(...args) {
                         super(...args)
                         this.model.name = "Noa"
@@ -58,14 +58,14 @@
         <p>First load MControl js script in your HTML &lt;head&gt;</p>
         <pre> &lt;script src="./m-control.js"&gt;&lt;/script&gt; </pre>
 
-        <p>In a script tag create your MC controller class extending MControl.Controller</p>
+        <p>In a script tag create your MC controller class extending MC.Controller</p>
         <pre>{{ this.excerpt.ex_html_code}}</pre>
         <ol>
             <li>include your creationcode in a window 'load' event
                 <pre>window.addEventListener('load", _ => { ... } </pre>
             </li>
-            <li>create your app Controller extending MControl.Controller base class
-                <pre>class HelloW extends MControl.Controller { ... } </pre>
+            <li>create your app Controller extending MC.Controller base class
+                <pre>class HelloW extends MC.Controller { ... } </pre>
             </li>
             <li>register your class nearby MControl framework
                 <pre>MControl.register(HelloW)</pre>

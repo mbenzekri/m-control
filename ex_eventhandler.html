@@ -43,7 +43,7 @@
 
     <p>Methods for incrementing and decrementing are quite simple.</p>
     <pre m-ref="ex_code_inc">{{ this.excerpt.ex_code_inc}}</pre>
-    <pre m-ref="ex_code_inc">{{ this.excerpt.ex_code_inc}}</pre>
+    <pre m-ref="ex_code_dec">{{ this.excerpt.ex_code_dec}}</pre>
 </body>
 <script>
     window.addEventListener('load', _ => {
@@ -52,7 +52,7 @@
         MControl.register(
 
             // create your controller
-            class MCtrlExample extends MControl.Controller {
+            class MCtrlExample extends MC.Controller {
 
                 constructor(element) {
                     super(element)
@@ -62,7 +62,7 @@
                     this.model.number++
                 }
                 dec() {
-                    this.model.number++
+                    this.model.number--
                 }
             }
         )

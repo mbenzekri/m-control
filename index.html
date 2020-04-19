@@ -19,6 +19,7 @@
             <li m-on:click="this.go($event)" _src="./ex_2wdbinding.html">to way data binding</li>
             <li m-on:click="this.go($event)" _src="./ex_eventhandler.html">handling events</li>
             <li m-on:click="this.go($event)" _src="./ex_domlabeling.html">dom elements handling</li>
+            <li m-on:click="this.go($event)" _src="./ex_classstyle.html">class/style handling</li>
             <li m-on:click="this.go($event)">Item 5</li>
         </ul>
         <hr>
@@ -31,18 +32,18 @@
     </div>
 </body>
 <script>
-    MControl.register(
-        class SideMenu extends MControl.Controller {
-            init() {
-                this.iframe = this.element.getElementsByTagName('iframe')[0]
-            }
-            go(event) {
-                const elem = event.target
-                const location = elem.getAttribute('_src')
-                this.iframe.src = location
-            }
+    class SideMenu extends MC.Controller {
+        init() {
+            this.iframe = this.element.getElementsByTagName('iframe')[0]
         }
-    )
+        go(event) {
+            const elem = event.target
+            const location = elem.getAttribute('_src')
+            this.iframe.src = location
+        }
+    }
+    
+    MControl.register(SideMenu)
     MControl.start()
 
 </script>

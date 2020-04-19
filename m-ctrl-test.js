@@ -1,7 +1,7 @@
 'use mode strict';
 
 MControl.register(
-    class MCtrlCookbook extends MControl.Controller {
+    class MCtrlCookbook extends MC.Controller {
         constructor(element) {
             super(element)
             this.model.name  = "Noa"
