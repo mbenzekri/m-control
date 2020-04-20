@@ -14,7 +14,7 @@ function fixindent(code) {
     return code.join('\n')
 }
 // for the demo we extends the Controller class by
-MC.Controller = class Example extends MC.Controller {
+class Example extends MC.Controller {
     constructor(element,properties) {
         super(element,properties)
         this.excerpt={}
@@ -46,3 +46,5 @@ MC.Controller = class Example extends MC.Controller {
         this.codewin.document.body.innerHTML = [ '<pre>',code,'</pre>' ].join('')
     }
 }
+
+MC.Controller = Example

@@ -9,7 +9,7 @@
         constructor() {
 
             window.addEventListener("load", _ =>
-                this.rafid = requestAnimationFrame(_ => this.renderloop())
+                this.rafid = requestAnimationFrame(_ => this.$renderloop())
             )
 
             window.addEventListener("unload", _ =>
@@ -63,7 +63,7 @@
 
             // --- Creation phase in controller lifecycle
             elems.forEach(elem => {
-                const appelems = this.controls(elem, classes)
+                const appelems = this.$controls(elem, classes)
                 appelems.forEach(appelem => {
                     const ctrlname = appelem.getAttribute('m-control')
                     if (!ctrlname) return
@@ -73,21 +73,29 @@
                     try {
                         appelem.$mcontrol = new ctrlclass()
                         // --- start controller
-                        appelem.$mcontrol.start(appelem)
+                        appelem.$mcontrol.$start(appelem)
                     } catch (e) {
                         return console.error(`MControl creation error for '${ctrlname}' :  ${e.message} at ${appelem.outerHTML.substr(0, 50)}`)
                     }
                 })
             })
         }
+
+        outdate(ctrl,property) {
+            if (!this.outdated.has(ctrl)) {
+                this.outdated.set(ctrl, {})
+            }
+            this.outdated.get(ctrl)[property]++
+        }
+
         /**
          * rendering loop for DOM refreshing when dynamic properties are outdated
          * This in an INTERNAL method dont use it
          */
-        renderloop() {
-            this.outdated.forEach((v, k) => k.render())
+        $renderloop() {
+            this.outdated.forEach((v, k) => k.$render())
             this.outdated = new Map()
-            requestAnimationFrame(_ => this.renderloop());
+            requestAnimationFrame(_ => this.$renderloop());
         }
         /**
          * collect end return nodes having 'm-control' attribute
@@ -95,7 +103,7 @@
          * @param {Controller[]} ctrlclasses : controller class list to filer search
          * @return {HTMLElement[]} node list found
          */
-        controls(elem, ctrlclasses) {
+        $controls(elem, ctrlclasses) {
             const ctrls = []
             const attr = elem.getAttribute('m-control')
             const selector = ctrlclasses.length ? ctrlclasses.map(ctrlclass => `[m-control="${ctrlclass.name}"]`).join(',') : '[m-control]'
@@ -114,9 +122,11 @@
         .reduce((p, k) => { p[k] = 1; return p }, {})
 
     class Controller {
-        debug = true
-        element = null
-        renderlist = []
+        debug = false
+        #recording = false
+        #renderlist = []
+        #access = {}
+        #element = null
         constructor() {
             this.modelvers = {}
             this.refs = {}
@@ -130,7 +140,7 @@
                             }
                             this.modelvers[prop] ? this.modelvers[prop]++ : (this.modelvers[prop] = 1)
                             obj[prop] = value
-                            this.outdate(prop)
+                            MC.outdate(this,prop)
                             return true
                         },
                         deleteProperty: function (target, property) {
@@ -144,15 +154,14 @@
             }
             closure()
         }
-
-        get propnames() {
-            return this.model ? Object.keys(this.model) : {}
-        }
+        get element() { return this.#element}
+        get propnames() { return this.model ? Object.keys(this.model) : {} }
+        init() { /*  nothing to do hook method to be specialized by new classes */ }
 
         $build() {
             const collected = []
             // collect the items to compile
-            for (let elem of this.element.querySelectorAll("*")) {
+            for (let elem of this.#element.querySelectorAll("*")) {
                 for (let text of elem.childNodes) {
                     if (text.nodeType !== Node.TEXT_NODE || !text.textContent.includes('{{')) continue
                     collected.push({ type: 'm-text', elem, attr: text })
@@ -170,18 +179,13 @@
                 try {
                     if (!params) continue
                     opts.attr.$mrender = new Function(...params)
-                    this.renderlist.push(opts.attr)
+                    this.#renderlist.push(opts.attr)
                 } catch (e) {
                     this.$error(`during build for ${opts.type} compile/bindings`, e, opts.elem)
                 }
             }
         }
 
-        /**
-         * @param {string|HTMLElement|Node|} a 
-         * @param {*} b 
-         * @param {*} c 
-         */
         $error(...args) {
             //var args = [...arguments];
             const element = args.find(a => a instanceof HTMLElement)
@@ -194,8 +198,8 @@
                 + `${(error && !error.stack) ? '\n@error: ' + error.message : ''}`
                 + `${(error && error.stack) ? '\n@error: ' + error.stack : ''}`)
         }
-        start(element) {
-            this.element = element
+        $start(element) {
+            this.#element = element
 
             // --- build phase in controller lifecycle
             this.$build()
@@ -203,12 +207,12 @@
             // --- Intialisation phase in controller lifecycle
             let res = this.init()
             res = (res && res.then) ? res : Promise.resolve()
-            res.then(_ => this.render())
+            res.then(_ => this.$render())
                 .catch(error => this.$error(`during init phase`, this.elem, error))
         }
-        render() {
-            // this.renderlist contain a list off dom object attributes / text /HTMLElement
-            this.renderlist.forEach(item => {
+        $render() {
+            // this.#renderlist contain a list off dom object attributes / text /HTMLElement
+            this.#renderlist.forEach(item => {
                 const elem = (item.nodeType === Node.ELEMENT_NODE) ? item : item.ownerElement;
                 const params = [this, elem, item, ...this.propnames.map(k => this.model[k])]
                 try {
@@ -218,14 +222,15 @@
                 }
             })
         }
-        init() {
-            // nothing to do // hook method
+        $startrec() {
+            this.#recording = true
+            this.#access = {}
         }
-        outdate(property) {
-            if (!MC.outdated.has(this)) {
-                MC.outdated.set(this, {})
-            }
-            MC.outdated.get(this)[property]++
+        $stoprec() {
+            this.#recording = false
+            const access = this.#access
+            this.#access = {}
+            return access
         }
     }
 
@@ -456,7 +461,7 @@
     Object.defineProperty(MC, "Controller", {
         enumerable: true,
         configurable: false,
-        writable: false,
+        writable: true,
         value: Controller
     });
     Object.defineProperty(MC, "Dynamic", {

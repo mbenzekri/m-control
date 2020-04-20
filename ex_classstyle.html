@@ -93,7 +93,7 @@
                         Object.keys(this.model.classobj).forEach(classname => {
                             this.model.classobj[classname] = (newclass === classname)
                         })
-                        this.outdate('model.classobj')
+                        MC.outdate(this,'classobj')
                     }
                 }
                 MControl.register(MCtrlExample)
