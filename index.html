@@ -11,15 +11,15 @@
         <h2>Summary
             <hr>
         </h2>
-        <h3 m-on:click="this.go($event)" _src="./intro.html">Introduction</h3>
-        <h3 m-on:click="this.go($event)" _src="./getstarted.html">Get started</h3>
-        <h3 m-on:click="this.go($event)" _src="./ex_interpolation.html">Examples</h3>
+        <h3 m-on:click="this.go($event)" src="./intro.html">Introduction</h3>
+        <h3 m-on:click="this.go($event)" src="./getstarted.html">Get started</h3>
+        <h3 m-on:click="this.go($event)" src="./ex_interpolation.html">Examples</h3>
         <ul>
-            <li m-on:click="this.go($event)" _src="./ex_interpolation.html">interpolation </li>
-            <li m-on:click="this.go($event)" _src="./ex_2wdbinding.html">to way data binding</li>
-            <li m-on:click="this.go($event)" _src="./ex_eventhandler.html">handling events</li>
-            <li m-on:click="this.go($event)" _src="./ex_domlabeling.html">dom elements handling</li>
-            <li m-on:click="this.go($event)" _src="./ex_classstyle.html">class/style handling</li>
+            <li m-on:click="this.go($event)" src="./ex_interpolation.html">interpolation </li>
+            <li m-on:click="this.go($event)" src="./ex_2wdbinding.html">to way data binding</li>
+            <li m-on:click="this.go($event)" src="./ex_eventhandler.html">handling events</li>
+            <li m-on:click="this.go($event)" src="./ex_domlabeling.html">dom elements handling</li>
+            <li m-on:click="this.go($event)" src="./ex_classstyle.html">class/style handling</li>
             <li m-on:click="this.go($event)">Item 5</li>
         </ul>
         <hr>
@@ -38,7 +38,7 @@
         }
         go(event) {
             const elem = event.target
-            const location = elem.getAttribute('_src')
+            const location = elem.getAttribute('src')
             this.iframe.src = location
         }
     }
