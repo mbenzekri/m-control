@@ -1,0 +1,41 @@
+<html>
+
+<head>
+    <script src="./m-control.js"></script>
+</head>
+
+<body>
+    <pre id="xml"></pre>
+</body>
+<script>
+
+    const data = {}
+    const insert = {
+        a: 12,
+        b: "coucou",
+        c: (1 == 1),
+        d: new Date(),
+        e: ["A", { nom: "BEN ZEKRI", prenom: "Mohamed" }, "C"],
+        f: {
+            g: 123,
+            h: "abcdefghijklmnopqrstuvwxyz",
+            i: {
+                j: 123,
+                k: "abcdefghijklmnopqrstuvwxyz"
+            }
+        },
+        l: null,
+        m: undefined
+    }
+    const dyndata = new MC.Dynamic(data)
+    Object.keys(insert).forEach(insprop => dyndata[insprop] = insert[insprop]);
+    function refresh() {
+        const elem = document.getElementById("xml")
+        elem.innerHTML = JSON.stringify(dyndata, null, 4)
+    }
+    refresh()
+    dyndata.e.forEach(item => console.log(item))
+
+</script>
+
+</html>

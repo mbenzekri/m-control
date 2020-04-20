@@ -155,7 +155,7 @@
                     collected.push({ type: 'm-text', elem, attr: text })
                 }
                 for (let attr of elem.attributes) {
-                    if(!attr.name.startsWith('m-')) continue
+                    if (!attr.name.startsWith('m-')) continue
                     const type = attr.name.replace(/:.*/, '')
                     if (!(type in compile)) continue
                     collected.push({ type, elem, attr })
@@ -309,13 +309,158 @@
         }
     }
 
+
+    class Dynamic {
+        #handler = {
+            get: (node, property) => {
+                if (property === '_isnode_') return true
+                if (property === '_node_') return node
+                if (property === '_dynamic_') return this
+                return this.getproperty(node, property)
+            },
+            set: (node, property, value) => {
+                this.addproperty(node, property, value)
+                return true
+            },
+            getPrototypeOf: () => Object.prototype,
+            setPrototypeOf: () => null,
+            isExtensible: () => true,
+            preventExtensions: () => null,
+            getOwnPropertyDescriptor(target, property) {
+                const found = [...target.childNodes].find(child => child.nodeName === property)
+                if (found) return {
+                    writable: true,
+                    configurable: true,
+                    enumerable: true
+                }
+            },
+            defineProperty: () => null,
+            has: (target, property) => {
+                const found = [...target.childNodes].find(child => child.nodeName === property)
+                return !!found
+            },
+            deleteProperty: (target, property) => {
+                const found = [...target.childNodes].find(child => child.nodeName === property)
+                if (found) found.parentNode.removeChild(found)
+            },
+            ownKeys: (target) => [...target.childNodes].map(node => node.nodeName),
+        }
+
+        constructor(data) {
+            const modeltype = document.implementation.createDocumentType("dynamic", "SYSTEM", "");
+            const root = document.implementation.createDocument(null, '_____dyn', modeltype).documentElement
+            if (!(data instanceof Object)) throw new Error(`Only object can be domified, type '${typeof data}'' was provided`)
+            Object.getOwnPropertyNames(data).forEach(property => {
+                const value = data[property]
+                this.addproperty(root, property, value)
+            })
+            root.addEventListener('DOMNodeInserted', event => {
+                if (event.target.nodeName === '#text') return
+                console.log('node inserted', this.path(event.target))
+            })
+            root.addEventListener('DOMNodeRemoved', event => {
+                if (event.target.nodeName === '#text') return
+                console.log('node removed', this.path(event.target))
+            })
+            root.addEventListener('DOMCharacterDataModified', event => {
+                console.log('data changed', this.path(event.target))
+            })
+            
+            
+            return new Proxy(root, this.#handler)
+        }
+
+        getproperty(node, property, value) {
+        
+            if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
+            const found = [...node.childNodes].find(child => child.nodeName === property)
+            if (!found) {
+                // bug when JSON.stringifying array 
+                if (property === 'toJSON' && node.getAttribute('type') === 'array') 
+                    return () =>  [...node.childNodes].map((child, i) => this.getproperty(node, i))
+                return undefined
+            }
+            const type = found.getAttribute('type')
+            switch (type) {
+                case 'number': return parseFloat(found.textContent)
+                case 'boolean': return (found.textContent === 'true')
+                case 'string': return found.textContent
+                case 'undefined': return undefined
+                case 'null': return null
+                case 'date': return new Date(found.textContent)
+                case 'array': {
+                    const array = new Proxy(found, this.#handler)
+                }
+            }
+            // array and object return a Proxy
+            return new Proxy(found, this.#handler)
+        }
+
+        addproperty(node, property, value) {
+            if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
+            const type = (value === null) ? 'null' :
+                (value === '') ? 'string' :
+                    (Array.isArray(value)) ? 'array' :
+                        (value instanceof Date) ? 'date' :
+                            typeof value;
+            let found = [...node.childNodes].find(child => child.nodeName === property)
+            const current = node.ownerDocument.createElement(property)
+            current.setAttribute('type', type)
+            if (found) {
+                node.replaceChild(current, found)
+                current.setAttribute('version', found.getAttribute('version')+1)
+            } else {
+                node.appendChild(current)
+                current.setAttribute('version', 1)
+            } 
+            
+            switch (type) {
+                case 'boolean':
+                case 'number':
+                case 'string':
+                    current.textContent = value.toString()
+                case 'undefined':
+                case 'null':
+                    break
+                case 'date':
+                    current.textContent = value.toISOString()
+                    break;
+                case 'array':
+                    value.forEach((value, index) => {
+                        this.addproperty(current, index, value)
+                    })
+                    break
+                case 'object':
+                    Object.getOwnPropertyNames(value).forEach((property) => {
+                        const val = value[property]
+                        this.addproperty(current, property, val)
+                    })
+                    break
+            }
+        }
+        path(node) {
+            const path = [] 
+            while (node && node.nodeName !== '_____dyn') {
+                path.unshift(node.nodeName)
+                node = node.parentNode
+            } 
+            return path.join('.')
+        }
+    }
+
     // create MC singleton
     const MC = new MControl()
     Object.defineProperty(MC, "Controller", {
         enumerable: true,
         configurable: false,
-        writable: true,
+        writable: false,
         value: Controller
+    });
+    Object.defineProperty(MC, "Dynamic", {
+        enumerable: true,
+        configurable: false,
+        writable: false,
+        value: Dynamic
     });
     Object.defineProperty(window, "MControl", {
         enumerable: true,
