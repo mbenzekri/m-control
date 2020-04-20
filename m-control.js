@@ -9,7 +9,7 @@
         constructor() {
 
             window.addEventListener("load", _ =>
-                this.rafid = requestAnimationFrame(_ => this.mrefreshloop())
+                this.rafid = requestAnimationFrame(_ => this.renderloop())
             )
 
             window.addEventListener("unload", _ =>
@@ -48,10 +48,10 @@
          */
         start(...args) {
             const elems = []
-            const ctrls = []
+            const classes = []
             args.forEach((arg, i) => {
                 if (arg instanceof HTMLElement) return elems.push(arg)
-                if (arg instanceof this.Controller) return ctrls.push(arg)
+                if (arg instanceof Controller) return classes.push(arg)
                 if (typeof arg === 'string') {
                     const elem = document.getElementById(id)
                     if (elem) return elems.push(elem)
@@ -60,10 +60,10 @@
                 console.error(`MController start error argument ${i} with id="${elem}' not found`)
             })
             if (elems.length === 0) elems.push(document.documentElement)
-            // --- Creation phase in controller lifecycle
 
+            // --- Creation phase in controller lifecycle
             elems.forEach(elem => {
-                const appelems = this.controls(elem, ctrls)
+                const appelems = this.controls(elem, classes)
                 appelems.forEach(appelem => {
                     const ctrlname = appelem.getAttribute('m-control')
                     if (!ctrlname) return
@@ -80,11 +80,14 @@
                 })
             })
         }
-
-        mrefreshloop() {
+        /**
+         * rendering loop for DOM refreshing when dynamic properties are outdated
+         * This in an INTERNAL method dont use it
+         */
+        renderloop() {
             this.outdated.forEach((v, k) => k.render())
             this.outdated = new Map()
-            requestAnimationFrame(_ => this.mrefreshloop());
+            requestAnimationFrame(_ => this.renderloop());
         }
         /**
          * collect end return nodes having 'm-control' attribute
