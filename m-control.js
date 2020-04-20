@@ -18,11 +18,11 @@
 
         }
         register(ctrlclass) {
-            // if (ctrlclass.prototype.isPrototypeOf(Controller)) {
-            this.classes.set(ctrlclass.prototype.constructor.name, ctrlclass)
-            //} else {
-            //    console.error(`trying to regsister non Controller class : ${ctrlclass.prototype.name}`)
-            //}
+            if (Controller.isPrototypeOf(ctrlclass)) {
+                this.classes.set(ctrlclass.prototype.constructor.name, ctrlclass)
+            } else {
+               console.error(`trying to register non Controller class : ${ctrlclass.prototype.name}`)
+            }
         }
         /**
          * start apps/controller labeled by a 'm-control' attribute. An app Controller is associated 
@@ -157,7 +157,7 @@
                 for (let attr of elem.attributes) {
                     if (!attr.name.startsWith('m-')) continue
                     const type = attr.name.replace(/:.*/, '')
-                    if (!(type in compile)) continue
+                    if (!(type in compile) || type === 'm-text') continue
                     collected.push({ type, elem, attr })
                 }
             }
