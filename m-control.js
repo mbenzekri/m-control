@@ -352,9 +352,6 @@
     class Dynamic {
         #handler = {
             get: (node, property) => {
-                if (property === '_isnode_') return true
-                if (property === '_node_') return node
-                if (property === '_dynamic_') return this
                 return this.getproperty(node, property)
             },
             set: (node, property, value) => {
@@ -421,12 +418,7 @@
 
             if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
             const found = [...node.childNodes].find(child => child.nodeName === property)
-            if (!found) {
-                // bug when JSON.stringifying array 
-                if (property === 'toJSON' && node.getAttribute('type') === 'array') 
-                    return () =>  [...node.childNodes].map((child, i) => this.getproperty(node, i))
-                return undefined
-            }
+            if (!found) return getmethod(node,property)
             const version = parseInt(found.getAttribute('version'))
             if (vread) return version
             this.onread(this.path(found),version)
@@ -500,6 +492,20 @@
                 node = node.parentNode
             } 
             return path.join('.').replace(/\._(\d+)/g,'[$1]')
+        }
+        getmethod(node,property) {
+            switch(node.getAttribute('type')) {
+                case 'array' : {
+                    switch(property) {
+                        case 'toJSON':
+                            return () =>  [...node.childNodes].map((child, i) => this.getproperty(node, i));
+                        case '$push':
+                            return (value) =>  this.addproperty(node,node.childNodes.length,value);
+                    }
+                }
+                default : return undefined
+            }
+
         }
     }
 
