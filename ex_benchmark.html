@@ -1,0 +1,70 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script type="module" src="ex_benchmark.js"></script>
+</head>
+
+<body class=pure m-control="Benchmark">
+    <div class=pure-g>
+        <div class="pure-u-2-5">
+            <h1>MControl.js (non-keyed)</h1>
+        </div>
+        <div class="pure-u-3-5">
+            <table class="pure-table pure-table-horizontal">
+                <tbody>
+                    <tr>
+                        <td><button type="button" class="pure-button pure-button-primary" id="run"
+                                m-on:click="this.run()">Create 1,000 rows</button></td>
+                        <td><button type="button" class="pure-button pure-button-primary" id="runlots"
+                                m-on:click="this.runLots()">Create 10,000 rows</button></td>
+                    </tr>
+                    <tr>
+                        <td><button type="button" class="pure-button pure-button-primary" id="add"
+                                m-on:click="this.add()">Append 1,000
+                                rows</button></td>
+                        <td><button type="button" class="pure-button pure-button-primary" id="update"
+                                m-on:click="this.update()">Update
+                                every 10th row</button></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button type="button" class="pure-button pure-button-primary" id="clear"
+                                m-on:click="this.clear()">Clear</button>
+                        </td>
+                        <td>
+                            <button type="button" class="pure-button pure-button-primary" id="swaprows"
+                                m-on:click="this.swapRows()">Swap Rows</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <fieldset>
+        <table class="pure-table pure-table-horizontal pure-table-striped">
+            <thead>
+                <tr>
+                    <td>id</td>
+                    <td>label</td>
+                    <td>remove</td>
+                    <td></td>
+                </tr>
+            </thead>
+            <tbody m-ref="tbody">
+            </tbody>
+        </table>
+
+    </fieldset>
+    </div>
+</body>
+<script>
+    window.addEventListener('load', _ => {
+        MC.start()
+    })
+</script>
+
+</html>

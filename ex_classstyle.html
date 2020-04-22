@@ -26,26 +26,27 @@
             <li>expr<sub>i</sub> : is a javascript expression usinc controller's dynamic property</li>
             <li> ... : is your static text  surrounding the expressions</li>
         </ul>
-        <pre>m-style:color="rgb( ${r} , ${g} , ${b} )" </pre>
-        <pre>m-style:width="${ mywidth }px" </pre>
+        <pre>m-style:color="rgb( ${µ.r} , ${µ.g} , ${µ.b} )" </pre>
+        <pre>m-style:width="${ µ.mywidth }px" </pre>
     </p>
 
     <fieldset  m-control="MCtrlExample">
         <legend>The demo :</legend>
         <input m-on:click="this.code()" type=button value="see code">
         <div>
-            <p><label>Choose text alignement : </label><select m-bind:value=align>
+            <p><label>Choose text alignement : </label><select m-bind:value=µ.align>
                 <option value="center">center</option>
                 <option value="left">left</option>
                 <option value="right">right</option>
             </select></p>
             <p><label>Color : </label>
-            red <input type="range"  min="0" max="255" m-bind:value="r">
-            green <input type="range"  min="0" max="255" m-bind:value="g">
-            blue <input type="range"  min="0" max="255" m-bind:value="b">
+            red <input type="range"  min="0" max="255" m-bind:value="µ.r">
+            green <input type="range"  min="0" max="255" m-bind:value="µ.g">
+            blue <input type="range"  min="0" max="255" m-bind:value="µ.b">
             </p>
-            <div m-style:text-align="${align}" m-style:color="rgb(${r},${g},${b})" style="padding: 5px;border: 1px solid black;"> 
-                <strong>Color me ! I my text is "{{ align }}" aligned  !!!</strong>
+            {{µ.align}} {{µ.r}}/{{µ.b}}/{{µ.b}}<br>
+            <div m-style:text-align="${µ.align}" m-style:color="rgb(${µ.r},${µ.g},${µ.b})" style="padding: 5px;border: 1px solid black;"> 
+                <strong>Color me ! I my text is "{{ µ.align }}" aligned  !!!</strong>
             </div>
             <style>
                 .redleft {
@@ -67,9 +68,9 @@
                 <input type="radio" name="drone" m-on:click="this.changeClass('greencenter')" > green &  center  <br>
                 <input type="radio" name="drone" m-on:click="this.changeClass('blueright')" > blue & right <br>
             </fieldset></p>
-            <div m-class="classobj" style="padding: 5px;border: 1px solid black;"> <strong>
+            <div m-class="µ.classobj" style="padding: 5px;border: 1px solid black;"> <strong>
                 I am actually '{{ 
-                    classobj.redleft ? 'red and left' : (classobj.greencenter ? 'green and center' : 'blue and right')
+                    µ.classobj.redleft ? 'red and left' : (µ.classobj.greencenter ? 'green and center' : 'blue and right')
                 }}'<br>
                 Choose my class !!! 
             </strong></div>
@@ -90,11 +91,10 @@
                         }
                     }
                     changeClass(newclass) {
-                        Object.keys(this.model.classobj).forEach(classname => {
-                            this.model.classobj[classname] = (newclass === classname)
-                        })
-                        MC.outdate(this,'classobj')
-                    }
+                        const classobj = this.model.classobj
+                        Object.keys(classobj).forEach(classname =>  
+                            classobj[classname] = (newclass === classname) 
+                    )}
                 }
                 MControl.register(MCtrlExample)
                 MControl.start()
