@@ -23,7 +23,7 @@
             if (Controller.isPrototypeOf(ctrlclass)) {
                 this.classes.set(ctrlclass.prototype.constructor.name, ctrlclass)
             } else {
-               console.error(`trying to register non Controller class : ${ctrlclass.prototype.name}`)
+                console.error(`trying to register non Controller class : ${ctrlclass.prototype.name}`)
             }
         }
         started(ctrl) {
@@ -91,7 +91,7 @@
          * This in an INTERNAL method dont use it
          */
         $renderloop() {
-            this.controllers.forEach( ctrl => ctrl.dirty && ctrl.$render())
+            this.controllers.forEach(ctrl => ctrl.dirty && ctrl.$render())
             requestAnimationFrame(_ => this.$renderloop());
         }
         /**
@@ -134,12 +134,12 @@
             this.refs = {}
             this.#model = new Dynamic(
                 {},
-                (path,version) => { if (this.#recording) this.#access[path] = version },
-                (path,version) => this.outdate(path,version)
+                (path, version) => { if (this.#recording) this.#access[path] = version },
+                (path, version) => this.outdate(path, version)
             )
         }
         get model() { return this.#model }
-        get element() { return this.#element}
+        get element() { return this.#element }
         get propnames() { return Object.keys(this.#model) }
         get dirty() { return !!this.#outdated.size }
         init() { /*  nothing to do hook method to be specialized by new classes */ }
@@ -167,7 +167,7 @@
                     opts.attr.$minode = MC.nextid()
                     opts.attr.$mversion = {}
                     opts.attr.$mrender = new Function(...params)
-                    this.#renderers.set(opts.attr.$minode,opts.attr)
+                    this.#renderers.set(opts.attr.$minode, opts.attr)
                 } catch (e) {
                     this.$error(`during build for ${opts.type} compile/bindings`, e, opts.elem)
                 }
@@ -214,9 +214,9 @@
                     item.$mrender.call(...params)
                     // stop recording
                     this.#recording = false
-                    this.$setdependencies(item,this.#access)
+                    this.$setdependencies(item, this.#access)
                     //const versions = Object.keys(this.#access).map(k => `read path ${k} version=${this.#access[k]}`).join('\n')
-                    this.#access = {}  
+                    this.#access = {}
                     // show collected versions
                     //versions && console.log(versions)
 
@@ -225,31 +225,31 @@
                 }
             })
         }
-        $setdependencies(node,accesses) {
-            Object.keys(accesses).forEach( path => {
+        $setdependencies(node, accesses) {
+            Object.keys(accesses).forEach(path => {
                 let version = accesses[path]
                 let pathuses
                 if (this.#usedby.has(path)) {
                     pathuses = this.#usedby.get(path)
                 } else {
                     pathuses = new Map()
-                    this.#usedby.set(path,pathuses)
+                    this.#usedby.set(path, pathuses)
                 }
-                pathuses.set(node.$minode,version)
+                pathuses.set(node.$minode, version)
             })
         }
 
-        outdate(path,version) {
-            this.#outdated.set(path,version)
+        outdate(path, version) {
+            this.#outdated.set(path, version)
         }
 
-        get outdatedlist () {
+        get outdatedlist() {
             const olist = new Map()
-            this.#outdated.forEach((newversion,newpath) => {
+            this.#outdated.forEach((newversion, newpath) => {
                 const list = this.#usedby.get(newpath)
-                list && list.forEach((version,inode) => {
+                list && list.forEach((version, inode) => {
                     const node = this.#renderers.get(inode)
-                    if (newversion > version) olist.set(node.$minode,node)
+                    if (newversion > version) olist.set(node.$minode, node)
                 })
             })
             this.#outdated = new Map()
@@ -298,7 +298,7 @@
             const evtnames = attr.name.replace(/m-on:/, '').split('|')
             const body = `
                 const µ=this.model; 
-                if (MC.debug) console.log("m-on rendering event=\${$event.name} handler=  ${attr.value.replace('\"','\'')}");
+                if (MC.debug) console.log("m-on rendering event=\${$event.name} handler=  ${attr.value.replace('\"', '\'')}");
                 ${attr.value}
             `
             try {
@@ -347,8 +347,12 @@
         }
     }
 
-    // ----- Dynamic ----------------------------------------------------------
-
+    /** ---------------
+     * Dynamic class contruct an internal structure with a provided plain javascript object
+     * this data may be accessed and modified using usual syntax dot an brackets : dynamic.property or dynamic.property[i]
+     * each access and changes to the data may trigger an event when listeners provided
+     */
+    const modeltype = document.implementation.createDocumentType("dynamic", "SYSTEM", "");
     class Dynamic {
         #handler = {
             get: (node, property) => {
@@ -362,45 +366,51 @@
             setPrototypeOf: () => null,
             isExtensible: () => true,
             preventExtensions: () => null,
-            getOwnPropertyDescriptor(target, property) {
-                const found = [...target.childNodes].find(child => child.nodeName === property)
-                if (found) return {
-                    writable: true,
-                    configurable: true,
-                    enumerable: true
-                }
+            getOwnPropertyDescriptor: (target, property) => {
+                const found = this.getnodeproperty(target, property)
+                if (found) return { writable: true, configurable: true, enumerable: true }
             },
             defineProperty: () => null,
             has: (target, property) => {
-                const found = [...target.childNodes].find(child => child.nodeName === property)
+                const found = this.getnodeproperty(target, property)
                 return !!found
             },
             deleteProperty: (target, property) => {
-                const found = [...target.childNodes].find(child => child.nodeName === property)
+                const found = this.getnodeproperty(target, property)
                 if (found) found.parentNode.removeChild(found)
             },
             ownKeys: (target) => [...target.childNodes].map(node => node.nodeName),
         }
 
-        constructor(data,onread,onupdate) {
-            this.onread=onread || (() => 0)
-            this.onupdate=onupdate || (() => 0)
-            const modeltype = document.implementation.createDocumentType("dynamic", "SYSTEM", "");
+        /**
+         * @param {Object} data data to be managed and observed
+         * @param {(path:string,version:number) => void} onread listener for data tree properties 
+         * @param {(path:string,version:number) => void} onupdate listener for data tree properties updates
+         */
+        constructor(data, onread, onupdate) {
+            this.onread = onread || (() => 0)
+            this.onupdate = onupdate || (() => 0)
             const root = document.implementation.createDocument(null, '_____dyn', modeltype).documentElement
-            if (!(data instanceof Object)) throw new Error(`Only object can be domified, type '${typeof data}'' was provided`)
+            if (!(data instanceof Object))
+                throw new Error(`Only object can be domified, type '${typeof data}'' was provided`)
+
+            // recursively add data values in root XML document
             Object.getOwnPropertyNames(data).forEach(property => {
                 const value = data[property]
                 this.addproperty(root, property, value)
             })
+
+            // add listener for xml tree change text nodes
             root.addEventListener('DOMNodeInserted', event => {
                 if (event.target.nodeName === '#text') {
                     const node = event.target.parentNode
                     const path = this.path(node)
-                    const version = parseInt(node.getAttribute('version'))
-                    this.onupdate(path,version)
+                    const version = this.getversion(node) 
+                    this.onupdate(path, version)
                     if (MC.debug) console.log(`Event model change at '${path}' version=${version}`)
                 }
             })
+
             // root.addEventListener('DOMNodeRemoved', event => {
             //     // this.onchange(this.path(event.target),event)
             //     // if (event.target.nodeName === '#text') return
@@ -411,17 +421,34 @@
             return new Proxy(root, this.#handler)
         }
 
+        /**
+         * return the value of the property for a provided node
+         * @param {Node} node 
+         * @param {string} property 
+         */
         getproperty(node, property) {
-            // version number requested
-            const vread = property.endsWith('$v')
-            property =  property.replace(/\$v$/,'') 
 
-            if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
-            const found = [...node.childNodes].find(child => child.nodeName === property)
-            if (!found) return getmethod(node,property)
+            // version number for property may be requested adding $v to property name
+            // ex: µ.prop1,prop2$v
+            // check if version number requested
+            const vread = property.endsWith('$v')
+            property = property.replace(/\$v$/, '')
+
+            // search fo property first
+            const found = (node.getAttribute('type') === 'array' && typeof property === 'number')
+                ? this.arr_item(property)
+                : [...node.childNodes].find(child => child.nodeName === property)
+            // search method instead
+            if (!found) return this.getmethod(node, property)
+
+            // if version property requested
             const version = parseInt(found.getAttribute('version'))
             if (vread) return version
-            this.onread(this.path(found),version)
+
+            // trigger access event
+            this.onread(this.path(found), version)
+            
+            // extract and return property as Dynamic object (Proxy)
             const type = found.getAttribute('type')
             switch (type) {
                 case 'number': return parseFloat(found.textContent)
@@ -430,31 +457,59 @@
                 case 'undefined': return undefined
                 case 'null': return null
                 case 'date': return new Date(found.textContent)
-                case 'array': {
-                    const array = new Proxy(found, this.#handler)
-                }
+                case 'array': return new Proxy(found, this.#handler)
+                default : return new Proxy(found, this.#handler)
             }
-            // array and object return a Proxy
-            return new Proxy(found, this.#handler)
         }
 
+        /**
+         * 
+         * @param {Node} node 
+         */
+        getversion(node) {
+            return parseInt(node.getAttribute('version'))
+        }
+        /**
+         * 
+         * @param {Node} node 
+         * @param {string} property 
+         * @returns {Node}
+         */
+        getnodeproperty(node, property) {
+            return [...node.childNodes].find(child => child.nodeName === property)
+        }
+        /**
+         * 
+         * @param {Node} node 
+         */
+        getnodetype(node) {
+            return node.getAttribute('type')
+        }
+        /**
+         * 
+         * @param {Node} value 
+         */
+        getvaluetype(value) {
+            if (value === null) return  'null'
+            if (value === '') return 'string'
+            if (Array.isArray(value)) return  'array'
+            if (value instanceof Date) return 'date'
+            return typeof value
+        }        
+        
         addproperty(node, property, value) {
             if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
-            const type = (value === null) ? 'null' :
-                (value === '') ? 'string' :
-                    (Array.isArray(value)) ? 'array' :
-                        (value instanceof Date) ? 'date' :
-                            typeof value;
             let found = [...node.childNodes].find(child => child.nodeName === property)
+            const type = this.getvaluetype(value)
             let current
             if (found) {
                 current = found
-                current.setAttribute('version', parseInt(found.getAttribute('version'))+1)
+                current.setAttribute('version', parseInt(found.getAttribute('version')) + 1)
             } else {
                 current = node.ownerDocument.createElement(property)
                 node.appendChild(current)
                 current.setAttribute('version', 1)
-            } 
+            }
             current.setAttribute('type', type)
 
             switch (type) {
@@ -485,25 +540,62 @@
                     break
             }
         }
+        /**
+         * get property path of a node
+         * @param {Node} node
+         * @returns {string} 
+         */
         path(node) {
-            const path = [] 
+            const path = []
             while (node && node.nodeName !== '_____dyn') {
                 path.unshift(node.nodeName)
                 node = node.parentNode
-            } 
-            return path.join('.').replace(/\._(\d+)/g,'[$1]')
+            }
+            return path.join('.').replace(/\._(\d+)/g, '[$1]')
         }
-        getmethod(node,property) {
-            switch(node.getAttribute('type')) {
-                case 'array' : {
-                    switch(property) {
+        /**
+         * extract item id from a node array item 
+         * the attribute 'sequence' of the array node stores the last
+         * allocted to extract item id number '_12' to 12
+         * @param {Node} node 
+         * @returns {number}
+         */
+        arr_itemid(node) {
+            return parseInt(node.nodeName.replace(/[^\d]+/, ''))
+        }
+        arr_item(node, index) {
+            return node.childNodes[index]
+        }
+        arr_length(node) {
+            return node.childNodes.lentgh
+        }
+        /**
+         * allocate new itemid node.nodeName to extract item id number '_12' to 12
+         * @param {Node} node 
+         * @returns {number}
+         */
+        arr_nextitemid(arrnode) {
+            const index = parseInt(node.getAttribute('sequence'))
+            if (isNaN(index)) index ^= 0
+            index++
+            node.setAttribute('sequence', index)
+            return index
+        }
+
+        getmethod(node, property) {
+            switch (node.getAttribute('type')) {
+                case 'array': {
+                    switch (property) {
                         case 'toJSON':
-                            return () =>  [...node.childNodes].map((child, i) => this.getproperty(node, i));
+                            return () => [...node.childNodes].map((child, i) => this.getproperty(node, i));
                         case '$push':
-                            return (value) =>  this.addproperty(node,node.childNodes.length,value);
+                            return (value) => {
+                                const index = this.arr_nextitemid(node)
+                                this.addproperty(node, index, value);
+                            }
                     }
                 }
-                default : return undefined
+                default: return undefined
             }
 
         }
