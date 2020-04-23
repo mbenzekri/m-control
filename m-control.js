@@ -259,14 +259,30 @@
          * 
          * @param {Node} attr 
          */
-        $scope(attr) {
-            const scope = []
+        $rightscopes(attr) {
+            const rscope = []
             let nodelem = attr.parentElement || attr.ownerElement
             while (nodelem !== this.#element) {
-                [...nodelem.attributes].forEach(attr => (attr.nodeName.startsWith('m-with:')) && scope.unshift(attr.$scope))
+                if (nodelem.$rscope) rscope.unshift(...nodelem.$rscope)
                 nodelem = nodelem.parentNode
             }
-            return scope.join('')
+            return rscope.join('')
+        }
+        /**
+         * 
+         * @param {HTMLAttribute} attr 
+         */
+        $leftscopes(attr) {
+            const lscope = {}
+            let nodelem = attr.parentElement || attr.ownerElement
+            while (nodelem !== this.#element) {
+                if (nodelem.$lscope)
+                    Object.keys(nodelem.$lscope)
+                        .filter(varname => !(varname in lscope))
+                        .forEach(varname => lscope[varname] = nodelem.$lscope[varname])
+                nodelem = nodelem.parentNode
+            }
+            return lscope
         }
     }
 
@@ -286,7 +302,7 @@
             return null
         },
         'm-class': (ctrl, elem, attr) => {
-            const scope = ctrl.$scope(attr)
+            const scope = ctrl.$rightscopes(attr)
             const body = scope + ` 
                 const _value_ = ${attr.value}
                 if ( _value_ && typeof _value_ === 'object' ) 
@@ -299,7 +315,7 @@
             return params
         },
         'm-style': (ctrl, elem, attr) => {
-            const scope = ctrl.$scope(attr)
+            const scope = ctrl.$rightscopes(attr)
             const styleprop = attr.name.replace(/m-style:/, '')
             const body = scope + `
                 const _styleprop_ = '${styleprop}';
@@ -310,7 +326,7 @@
             return ['$node', '$attr', 'µ', body]
         },
         'm-on': (ctrl, elem, attr) => {
-            const scope = ctrl.$scope(attr)
+            const scope = ctrl.$rightscopes(attr)
             const evtnames = attr.name.replace(/m-on:/, '').split('|')
             const body = scope + `
                 const µ=this.model; 
@@ -326,7 +342,7 @@
             return null
         },
         'm-text': (ctrl, elem, text) => {
-            const scope = ctrl.$scope(text)
+            const scope = ctrl.$rightscopes(text)
             const body = scope + ` 
                 if (MC.debug) console.log('m-text rendering %s',$text.textContent)
                 $text.textContent = \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\`;
@@ -334,19 +350,25 @@
             return ['$node', '$text', 'µ', body]
         },
         'm-bind': (ctrl, elem, attr) => {
-            const scope = ctrl.$scope(attr)
+            const rscope = ctrl.$rightscopes(attr)
+            const lscope = ctrl.$leftscopes(attr)
             const attrname = attr.name.replace(/m-bind:/, '')
-            const proppath = attr.value
+            let proppath = attr.value
+            const proproot = proppath.replace(/(\.|\[).*$/, '')
+            if (proproot in lscope) {
+                proppath = lscope[proproot] + attr.value.replace(/^[^\.\[]*/, '')
+            }
 
             // create binding from input to model
             try {
                 const body = `
                     const µ = this.model
-                ` + scope +
-                `
                     let _value_ = $event.target['${attrname}']
                     _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
-                    if (MC.debug) console.log(\`input => model with ${proppath}=\${JSON.stringify(${proppath})} input=\${ _value_ } \`)
+                    if (MC.debug) {
+                        console.log(\`input => model with ${proppath}=\${JSON.stringify(${proppath})} input=\${ _value_ } \`)
+                        debugger
+                    }
                     ${proppath} = _value_
                 `
                 const func = new Function('$event', body).bind(ctrl)
@@ -358,7 +380,7 @@
             }
 
             // create binding from model to input
-            const body = scope + `
+            const body = rscope + `
                 if (MC.debug) console.log(\`model => input with model.${proppath}=\${JSON.stringify(${proppath})}(version:\${${proppath}$v})  input[\${$node.type}]=\${$node['${attrname}']} \`)
                 $node['${attrname}'] = ${proppath}
             `
@@ -371,8 +393,10 @@
                 if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
                 let ${varname} = ${proppath};
             `
-            attr.$scope = fragment
-            return null
+            if (!elem.$rscope) elem.$rscope = []
+            if (!elem.$lscope) elem.$lscope = {}
+            elem.$rscope.push(fragment)
+            elem.$lscope[varname] = proppath
         }
     }
 
@@ -464,8 +488,8 @@
             property = property.replace(/\$v$/, '')
 
             // search fo property first
-            const found = (node.getAttribute('type') === 'array' && typeof property === 'number')
-                ? this.arr_item(property)
+            const found = (node.getAttribute('type') === 'array' && /\d+/.test(property) )
+                ? this.arr_item(node,parseInt(property))
                 : [...node.childNodes].find(child => child.nodeName === property)
             // search method instead
             if (!found) return this.getmethod(node, property)

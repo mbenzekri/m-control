@@ -9,7 +9,7 @@
     <script src="./m-example.js"></script>
 </head>
 
-<body class=pure>
+<body class="pure mg-1">
 
     <h1>Variable scoping
         <hr>
@@ -20,7 +20,7 @@
         <li>'m-with:' modifier is followed by the variable name to define </li>
         <li> the attribute value is the property path to associate</li>
         <pre>m-with:color="µ.color" </pre>
-        <pre>m-with:name="${ µ.person.name }px" </pre>
+        <pre>m-with:name="µ.person.name" </pre>
     </p>
 
     <fieldset m-control="MCtrlExample">
@@ -31,7 +31,7 @@
                 <label>Choose text alignement : </label>
                 <select m-bind:value=align>
                     <option value="center">center</option>
-                    <option value="left">left</option>
+                    <option value="left" selected>left</option>
                     <option value="right">right</option>
                 </select>
             </p>
@@ -45,7 +45,22 @@
             <div m-with:name="µ.person.name" m-style:text-align="${align}"
                 m-style:color="rgb(${color.r},${color.g},${color.b})" style="padding: 5px;border: 1px solid black;">
                 <strong> I am {{ name }} and my text is "{{ align }}" aligned !!!</strong>
+
             </div>
+            <table class="pure pure-table-bordered">
+                <tr>
+                    <td>align = {{ align }}</td>
+                    <td>µ.align = {{ µ.align}}</td>
+                </tr>
+                <tr>
+                    <td>name = {{ name }}</td>
+                    <td>µ.person.name = {{ µ.person.name}}</td>
+                </tr>
+                <tr>
+                    <td>color = {{ JSON.stringify(color) }}</td>
+                    <td>µ.person.color = {{ JSON.stringify(color) }}}}</td>
+                </tr>
+            </table>
         </div>
         <script>
             window.addEventListener('load', _ => {
@@ -55,7 +70,7 @@
                         this.model.align = 'center',
                             this.model.person = {
                                 name: 'Noa',
-                                color: { r: 128, b: 128, b: 128 }
+                                color: { r: 128, g: 128, b: 128 }
                             }
                     }
                 }
