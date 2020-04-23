@@ -45,22 +45,21 @@
             <div m-with:name="µ.person.name" m-style:text-align="${align}"
                 m-style:color="rgb(${color.r},${color.g},${color.b})" style="padding: 5px;border: 1px solid black;">
                 <strong> I am {{ name }} and my text is "{{ align }}" aligned !!!</strong>
-
+                <table class="pure pure-table-bordered">
+                    <tr>
+                        <td>align = {{ align }}</td>
+                        <td>µ.align = {{ µ.align}}</td>
+                    </tr>
+                    <tr>
+                        <td>name = {{ name }}</td>
+                        <td>µ.person.name = {{ µ.person.name}}</td>
+                    </tr>
+                    <tr>
+                        <td>color = {{ JSON.stringify(color) }}</td>
+                        <td>µ.person.color = {{ JSON.stringify(color) }}}}</td>
+                    </tr>
+                </table>    
             </div>
-            <table class="pure pure-table-bordered">
-                <tr>
-                    <td>align = {{ align }}</td>
-                    <td>µ.align = {{ µ.align}}</td>
-                </tr>
-                <tr>
-                    <td>name = {{ name }}</td>
-                    <td>µ.person.name = {{ µ.person.name}}</td>
-                </tr>
-                <tr>
-                    <td>color = {{ JSON.stringify(color) }}</td>
-                    <td>µ.person.color = {{ JSON.stringify(color) }}}}</td>
-                </tr>
-            </table>
         </div>
         <script>
             window.addEventListener('load', _ => {
