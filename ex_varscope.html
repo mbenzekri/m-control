@@ -1,0 +1,71 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
+</head>
+
+<body class=pure>
+
+    <h1>Variable scoping
+        <hr>
+    </h1>
+
+    <p>To add a short name to a model value for less usage complexity use m-with tag
+        to affect a model value path to a MC controller variable
+        <li>'m-with:' modifier is followed by the variable name to define </li>
+        <li> the attribute value is the property path to associate</li>
+        <pre>m-with:color="µ.color" </pre>
+        <pre>m-with:name="${ µ.person.name }px" </pre>
+    </p>
+
+    <fieldset m-control="MCtrlExample">
+        <legend>The demo :</legend>
+        <input m-on:click="this.code()" type=button value="see code">
+        <div m-with:align='µ.align' m-with:color='µ.person.color'>
+            <p>
+                <label>Choose text alignement : </label>
+                <select m-bind:value=align>
+                    <option value="center">center</option>
+                    <option value="left">left</option>
+                    <option value="right">right</option>
+                </select>
+            </p>
+            <p>
+                <label>Color : </label>
+                red <input type="range" min="0" max="255" m-bind:value="color.r">
+                green <input type="range" min="0" max="255" m-bind:value="color.g">
+                blue <input type="range" min="0" max="255" m-bind:value="color.b">
+            </p>
+            <p>Name <input type=text size=20 m-bind:value="µ.person.name"></p>
+            <div m-with:name="µ.person.name" m-style:text-align="${align}"
+                m-style:color="rgb(${color.r},${color.g},${color.b})" style="padding: 5px;border: 1px solid black;">
+                <strong> I am {{ name }} and my text is "{{ align }}" aligned !!!</strong>
+            </div>
+        </div>
+        <script>
+            window.addEventListener('load', _ => {
+                class MCtrlExample extends MC.Controller {
+                    constructor() {
+                        super()
+                        this.model.align = 'center',
+                            this.model.person = {
+                                name: 'Noa',
+                                color: { r: 128, b: 128, b: 128 }
+                            }
+                    }
+                }
+                MControl.register(MCtrlExample)
+                MControl.start()
+            })
+        </script>
+    </fieldset>
+
+</body>
+
+
+</html>

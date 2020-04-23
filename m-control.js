@@ -255,6 +255,19 @@
             this.#outdated = new Map()
             return olist
         }
+        /**
+         * 
+         * @param {Node} attr 
+         */
+        $scope(attr) {
+            const scope = []
+            let nodelem = attr.parentElement || attr.ownerElement
+            while (nodelem !== this.#element) {
+                [...nodelem.attributes].forEach(attr => (attr.nodeName.startsWith('m-with:')) && scope.unshift(attr.$scope))
+                nodelem = nodelem.parentNode
+            }
+            return scope.join('')
+        }
     }
 
     // ---------------------------------
@@ -273,30 +286,33 @@
             return null
         },
         'm-class': (ctrl, elem, attr) => {
-            const body = ` 
-                const value = ${attr.value}
-                if ( value && typeof value === 'object' ) 
-                    if (MC.debug) console.log("m-class rendering class= %s", JSON.stringify(value));
-                    Object.keys(value).forEach(classname =>
-                        value[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
+            const scope = ctrl.$scope(attr)
+            const body = scope + ` 
+                const _value_ = ${attr.value}
+                if ( _value_ && typeof _value_ === 'object' ) 
+                    if (MC.debug) console.log("m-class rendering class= %s", JSON.stringify(_value_));
+                    Object.keys(_value_).forEach(classname =>
+                        _value_[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
                     ) 
             `
             const params = ['$node', '$attr', 'µ', body]
             return params
         },
         'm-style': (ctrl, elem, attr) => {
+            const scope = ctrl.$scope(attr)
             const styleprop = attr.name.replace(/m-style:/, '')
-            const body = `
-                const styleprop = '${styleprop}';
-                const stylevalue = \`${attr.value}\`;
-                if (MC.debug) console.log('m-style rendering %s = %s',styleprop,stylevalue);
-                $node.style[styleprop] = stylevalue;
+            const body = scope + `
+                const _styleprop_ = '${styleprop}';
+                const _stylevalue_ = \`${attr.value}\`;
+                if (MC.debug) console.log('m-style rendering %s = %s',_styleprop_,_stylevalue_);
+                $node.style[_styleprop_] = _stylevalue_;
             `
             return ['$node', '$attr', 'µ', body]
         },
         'm-on': (ctrl, elem, attr) => {
+            const scope = ctrl.$scope(attr)
             const evtnames = attr.name.replace(/m-on:/, '').split('|')
-            const body = `
+            const body = scope + `
                 const µ=this.model; 
                 if (MC.debug) console.log("m-on rendering event=\${$event.name} handler=  ${attr.value.replace('\"', '\'')}");
                 ${attr.value}
@@ -310,14 +326,15 @@
             return null
         },
         'm-text': (ctrl, elem, text) => {
-            const body = ` 
-                const value =  \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\`
+            const scope = ctrl.$scope(text)
+            const body = scope + ` 
                 if (MC.debug) console.log('m-text rendering %s',$text.textContent)
-                $text.textContent = value;
+                $text.textContent = \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\`;
             `
             return ['$node', '$text', 'µ', body]
         },
         'm-bind': (ctrl, elem, attr) => {
+            const scope = ctrl.$scope(attr)
             const attrname = attr.name.replace(/m-bind:/, '')
             const proppath = attr.value
 
@@ -325,10 +342,12 @@
             try {
                 const body = `
                     const µ = this.model
-                    let value = $event.target['${attrname}']
-                    value = ($event.target.type === 'number') ? (value === '') ? 0 : parseFloat(value) : value
-                    if (MC.debug) console.log(\`input => model with ${proppath}=\${JSON.stringify(${proppath})}(version:\${${proppath}$v}) input=\${ value } (version:\${ JSON.stringify($event.target.getAttributeNode('${attr.name}').$mversion) }) \`)
-                    ${proppath} = value
+                ` + scope +
+                `
+                    let _value_ = $event.target['${attrname}']
+                    _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
+                    if (MC.debug) console.log(\`input => model with ${proppath}=\${JSON.stringify(${proppath})} input=\${ _value_ } \`)
+                    ${proppath} = _value_
                 `
                 const func = new Function('$event', body).bind(ctrl)
                 elem.addEventListener('change', func)
@@ -339,11 +358,21 @@
             }
 
             // create binding from model to input
-            const body = `
-                    if (MC.debug) console.log(\`model => input with model.${proppath}=\${JSON.stringify(${proppath})}(version:\${${proppath}$v})  input[\${$node.type}]=\${$node['${attrname}']}(version: \${ JSON.stringify($attr.$mversion) }) \`)
-                    $node['${attrname}'] = ${proppath}
+            const body = scope + `
+                if (MC.debug) console.log(\`model => input with model.${proppath}=\${JSON.stringify(${proppath})}(version:\${${proppath}$v})  input[\${$node.type}]=\${$node['${attrname}']} \`)
+                $node['${attrname}'] = ${proppath}
             `
             return ['$node', '$attr', 'µ', body]
+        },
+        'm-with': (ctrl, elem, attr) => {
+            const varname = attr.name.replace(/m-with:/, '')
+            const proppath = attr.value
+            const fragment = `
+                if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
+                let ${varname} = ${proppath};
+            `
+            attr.$scope = fragment
+            return null
         }
     }
 
@@ -405,7 +434,7 @@
                 if (event.target.nodeName === '#text') {
                     const node = event.target.parentNode
                     const path = this.path(node)
-                    const version = this.getversion(node) 
+                    const version = this.getversion(node)
                     this.onupdate(path, version)
                     if (MC.debug) console.log(`Event model change at '${path}' version=${version}`)
                 }
@@ -447,7 +476,7 @@
 
             // trigger access event
             this.onread(this.path(found), version)
-            
+
             // extract and return property as Dynamic object (Proxy)
             const type = found.getAttribute('type')
             switch (type) {
@@ -458,7 +487,7 @@
                 case 'null': return null
                 case 'date': return new Date(found.textContent)
                 case 'array': return new Proxy(found, this.#handler)
-                default : return new Proxy(found, this.#handler)
+                default: return new Proxy(found, this.#handler)
             }
         }
 
@@ -490,13 +519,13 @@
          * @param {Node} value 
          */
         getvaluetype(value) {
-            if (value === null) return  'null'
+            if (value === null) return 'null'
             if (value === '') return 'string'
-            if (Array.isArray(value)) return  'array'
+            if (Array.isArray(value)) return 'array'
             if (value instanceof Date) return 'date'
             return typeof value
-        }        
-        
+        }
+
         addproperty(node, property, value) {
             if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
             let found = [...node.childNodes].find(child => child.nodeName === property)
