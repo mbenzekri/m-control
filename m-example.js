@@ -1,3 +1,6 @@
+let CODE = ''
+window.addEventListener('load',() => CODE = document.documentElement.outerHTML )
+
 function fixindent(code) {
     const regex = /^\s*/gm;
     const array = code.split(/\n/)
@@ -42,7 +45,7 @@ class Example extends MC.Controller {
     code() {
         if (this.codewin) this.codewin.close()
         this.codewin = window.open("", '_'+Date.now(), "width=1000,height=700")
-        const code = this.$sanitize(document.documentElement.outerHTML)
+        const code = this.$sanitize(CODE)
         this.codewin.document.body.innerHTML = [ '<pre>',code,'</pre>' ].join('')
     }
 }

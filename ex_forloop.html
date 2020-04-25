@@ -16,10 +16,11 @@
 <body class=pure>
 
 
-    <h1> large set of bindings performance testing event handler to an HTML element
+    <h1> displaying arrays
         <hr>
     </h1>
-    <p>In this example we bind a lot of iput event to see performance.</p>
+    <p>In this example we describe how to display arrays with MC.</p>
+    <p>It displays an array of numbers with automatic line and column sum</p>
 
     <fieldset m-control="MCtrlExample">
         <input m-on:click="this.code()" style="float: right;" type=button value="see code">
@@ -28,20 +29,35 @@
             <thead>
                 <tr>
                     <td>#</td>
-                    <td m-for:letter="µ.letters">{{ letter }}</td>
+                    <template m-for:letter="µ.letters">
+                        <td>
+                            {{ letter }}
+                        </td>
+                    </template>
                     <td>total</td>
                 </tr>
             </thead>
             <tbody>
-                <tr m-for:item:i=µ.table>
+                <template m-for:item:i=µ.table><tr>
                     <td> {{ i }} </td>
-                    <td m-for:letter="µ.letters">
-                        <input m-bind:value="item[letter]" type="number" onfocus="this.select()"
-                            onmouseup="return false" />
-                    </td>
-                    <td> {{ this.sum(item) }} </td>
-                </tr>
+                    <template m-for:letter="µ.letters"><td>
+                            <input m-bind:value="item[letter]" type="number" onfocus="this.select()"
+                                onmouseup="return false" size=5 />
+                    </td></template>
+                    <td> {{ this.sumline(item) }} </td>
+                </tr></template>
             </tbody>
+            <tfoot>
+                <tr>
+                    <td> </td>
+                    <template m-for:letter="µ.letters">
+                        <td>
+                            {{ this.sumcol(letter) }}
+                        </td>
+                    </template>
+                    <td> </td>
+                </tr>
+            </tfoot>
         </table>
     </fieldset>
 </body>
@@ -52,28 +68,23 @@
         constructor(element) {
             super(element)
             // constants 
-            this.count = 12
+            this.count = 10
             // dynamics
             this.model.letters = ['A', 'B', 'C', 'D', 'E']
             this.model.table = []
             for (let i = 0; i < this.count; i++)
                 this.model.table[i] = { A: 1, B: 2, C: 3, D: 4, E: 5 }
         }
-        init() {
-            setInterval(_ => {
-                for (let i = 0; i < this.count / 10; i++) {
-                    const index = this.rand(this.count)
-                    const num = this.rand(this.model.letters.length)
-                    const letter = this.model.letters[num]
-                    this.model.table[index][letter] = this.rand(100000)
-                }
-            }, 200)
-        }
         rand(n) {
             return Math.floor(n * Math.random())
         }
-        sum(item) {
+        sumline(item) {
             return Object.values(item).reduce((sum, v) => sum + v, 0)
+        }
+        sumcol(letter) {
+            let sum = 0;
+            this.model.table.forEach( item => sum+=item[letter])
+            return sum
         }
     }
 

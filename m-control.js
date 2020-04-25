@@ -140,7 +140,6 @@
      *                              a property $mrender is added at controller compile time to render the ui for the modifier
      * @property {HTMLElement} #element the root element labeled by the 'm-control' modifier
      * @property {Node[]} #recording true wen recording access to dynamic properties 
-     * @property {Attr[]} #forlist true wen recording access to dynamic properties 
      */
     class Controller {
         #recording = false
@@ -150,7 +149,6 @@
         #model = null
         #usedby = new Map()
         #outdated = new Map()
-        #forlist = []
         constructor() {
             this.refs = {}
             this.#model = new Dynamic(
@@ -168,27 +166,15 @@
          */
         init() { /*  nothing to do hook method to be specialized by new classes */ }
 
-        $build() {
+        $build(root = this.#element) {
 
             const collected = []
-            // collect m-for nodes 
-            {
-                const looplist = []
-                for (let elem of this.#element.querySelectorAll("*")) {
-                    for (let attr of elem.attributes) {
-                        if (attr.name.startsWith('m-for:')) {
-                            looplist.push(attr)
-                        }
-                    }
-                }
-                looplist.reverse().map(attr => {
-                    const elem = this.$buildloop(attr)
-                    collected.push({ type: 'm-for', elem, attr: elem })
-                })
-            }
-
             // collect the items to compile
-            for (let elem of this.#element.querySelectorAll("*")) {
+            const elemlist = [root, ... root.querySelectorAll("*")]
+            for (let elem of elemlist) {
+                if (elem.nodeType === Node.COMMENT_NODE && elem.$arraypath) {
+                    collected.push({ type: 'm-for', elem, attr: elem })
+                }
                 for (let text of elem.childNodes) {
                     if (text.nodeType !== Node.TEXT_NODE || !text.textContent.includes('{{')) continue
                     collected.push({ type: 'm-text', elem, attr: text })
@@ -214,43 +200,8 @@
                 } catch (e) {
                     this.$error(`during build for ${opts.type} compile/bindings`, e, opts.elem)
                 }
-                this.#forlist.forEach(loopnode => this.#renderers.set(loopnode.$minode, loopnode.$mrender))
             }
         }
-        $buildloop(attr) {
-            // replace m-for template by comment node
-            const [varname, idxname] = attr.name.replace(/^m-for:/, '').split(':')
-            const template = parentNode(attr)
-            const parent = parentNode(template)
-            const comment = document.createComment('My comment to replace m-for template')
-            parent.replaceChild(comment, template)
-            comment.$template = template
-            comment.$varname = varname
-            comment.$idxname = idxname
-            comment.$listeners = []
-            comment.$arraypath = attr.textContent
-            // associate listeners to changes 
-            comment.$listeners.push(this.model.$listen('push', attr.textContent,
-                (type, path, property, node) => {
-                    console.log(`event type=[${type}] on path='${path}' property='${property}' `)
-                }))
-            comment.$listeners.push(this.model.$listen('pop', attr.textContent,
-                (type, path, property, node) => {
-                    console.log(`event type=[${type}] on path='${path}' property='${property}' `)
-                }))
-            comment.$listeners.push(this.model.$listen('insert', attr.textContent,
-                (type, path, property, node) => {
-                    console.log(`event type=[${type}] on path='${path}' property='${property}' `)
-                }))
-            comment.$listeners.push(this.model.$listen('change', attr.textContent,
-                (type, path, property, node) => {
-                    console.log(`event type=[${type}] on path='${path}' property='${property}' `)
-                }))
-            comment.$minode = MC.nextid()
-            comment.$mversion = {}
-            return comment
-        }
-
         $error(...args) {
             //var args = [...arguments];
             const element = args.find(a => a instanceof HTMLElement)
@@ -281,7 +232,7 @@
             const torender = full ? this.#renderers : this.outdatedlist
             // this.#renderers contain a list off dom object attributes / text /HTMLElement
             torender.forEach(item => {
-                const elem = (item.nodeType === Node.ELEMENT_NODE) ? item : item.ownerElement || item.parentElement;
+                const elem = (item.nodeType === Node.ATTRIBUTE_NODE || item.nodeType === Node.TEXT_NODE) ? parentNode(item) : item
                 const params = [this, elem, item, this.model]
                 try {
                     // record properties access during rendering
@@ -368,11 +319,23 @@
          * @param {Element} template 
          * @param {any} scope 
          */
-        $addNode(previous, node, template, scope) {
-            const newnode = template.cloneNode(true)
-            newnode.$scope = scope
-            previous.parentNode.insertBefore(newnode, previous)
-            // TO BE COTINUED HERE ??? this.$build???
+        $addNode(previous, template, scope) {
+            var fragment = document.importNode(template.content, true);
+            previous.after(fragment)
+            const newnode = previous.nextElementSibling
+            Object.keys(scope).forEach( varname => {
+                const proppath = scope[varname]
+                const fragment = `
+                    if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
+                    let ${varname} = ${proppath};
+                `
+                if (!newnode.$rscope) newnode.$rscope = []
+                if (!newnode.$lscope) newnode.$lscope = {}
+                newnode.$rscope.push(fragment)
+                newnode.$lscope[varname] = proppath
+            })
+            this.$build(newnode)
+            return newnode
         }
     }
 
@@ -452,7 +415,8 @@
             // create binding from input to model
             try {
                 const body = `
-                    const µ = this.model
+                    const µ = this.model 
+                    ${ rscope }
                     let _value_ = $event.target['${attrname}']
                     _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
                     if (MC.debug) {
@@ -494,15 +458,26 @@
          * @param {HTMLElement} elem 
          * @param {Attr} attr 
          */
-        'm-for': function (ctrl, elem, attr) {
-
-            const body = `
-                console.log("render for loop item='%s' index:='%s' template= %s",$node.$varname,$node.$idxname,$node.$template)
-                const _array_ = ${elem.$arraypath}
+        'm-for': function (ctrl, template, attr) {
+            const arraypath = attr.textContent 
+            const scope = ctrl.$rightscopes(attr)
+            const [type, varname, iname ] = attr.name.split(':')
+            const idxname =  iname || '$index'
+            // associate listeners to changes 
+            template.$listener = (type, path, property, node) => {
+                console.log(`event type=[${type}] on path='${path}' property='${property}' `)
+            }
+            ctrl.model.$listen('push', arraypath,template.$listener)
+            ctrl.model.$listen('pop', arraypath,template.$listener)
+            ctrl.model.$listen('insert', arraypath,template.$listener)
+            ctrl.model.$listen('change', arraypath,template.$listener)
+            const body = scope + `
+                const _array_ = ${arraypath}
                 let _previous_ = $node
                 _array_.forEach(( _item_, _i_ ) => {
-                    const _scope_ = { "${elem.$varname}" : _item_, "${elem.$idxname}" : _i_ }
-                    _previous_ = this.$addNode(_previous_,$node.$template,_scope_)
+                    if (MC.debug) console.log("m-for rendering loop array=%s index=%s ",${arraypath},${idxname})
+                    const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                    _previous_ = this.$addNode(_previous_,$node,_scope_)
                 })
             `
             return ['$node', '$attr', 'µ', '$type', '$path', body]
