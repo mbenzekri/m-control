@@ -1,0 +1,87 @@
+<html>
+
+<head>
+    <script>
+        window.times = { first: Date.now() }
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="./m-control.js"></script>
+    <script src="./m-example.js"></script>
+
+</head>
+
+<body class=pure>
+
+
+    <h1> large set of bindings performance testing event handler to an HTML element
+        <hr>
+    </h1>
+    <p>In this example we bind a lot of iput event to see performance.</p>
+
+    <fieldset m-control="MCtrlExample">
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
+        <legend>The demo :</legend>
+        <table class="pure-table pure-table-bordered">
+            <thead>
+                <tr>
+                    <td>#</td>
+                    <td m-for:letter="µ.letters">{{ letter }}</td>
+                    <td>total</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr m-for:item:i=µ.table>
+                    <td> {{ i }} </td>
+                    <td m-for:letter="µ.letters">
+                        <input m-bind:value="item[letter]" type="number" onfocus="this.select()"
+                            onmouseup="return false" />
+                    </td>
+                    <td> {{ this.sum(item) }} </td>
+                </tr>
+            </tbody>
+        </table>
+    </fieldset>
+</body>
+
+<script>
+    class MCtrlExample extends MC.Controller {
+
+        constructor(element) {
+            super(element)
+            // constants 
+            this.count = 12
+            // dynamics
+            this.model.letters = ['A', 'B', 'C', 'D', 'E']
+            this.model.table = []
+            for (let i = 0; i < this.count; i++)
+                this.model.table[i] = { A: 1, B: 2, C: 3, D: 4, E: 5 }
+        }
+        init() {
+            setInterval(_ => {
+                for (let i = 0; i < this.count / 10; i++) {
+                    const index = this.rand(this.count)
+                    const num = this.rand(this.model.letters.length)
+                    const letter = this.model.letters[num]
+                    this.model.table[index][letter] = this.rand(100000)
+                }
+            }, 200)
+        }
+        rand(n) {
+            return Math.floor(n * Math.random())
+        }
+        sum(item) {
+            return Object.values(item).reduce((sum, v) => sum + v, 0)
+        }
+    }
+
+    window.addEventListener('load', _ => {
+        MControl.register(MCtrlExample)
+        MControl.start()
+    })
+
+</script>
+
+</html>

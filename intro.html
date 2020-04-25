@@ -2,42 +2,99 @@
 
 <head>
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css">
+
 </head>
 
 <body>
-    <h1>MControl Cookbook
-        <hr>
-    </h1>
+    <div class=mg-1>
+        <h1>MControl Cookbook
+            <hr>
+        </h1>
+ 
+        <blockquote>
+            “It is practically impossible to teach good programming to students that have had a 
+            prior  exposure to BASIC: as potential programmers they are mentally mutilated beyond
+            hope of regeneration.”
+            <cite>- Edsger Dijkstra</cite>
+        </blockquote>
+        <blockquote>“My first programming language was ... BASIC ...”
+            <cite>- Me</cite>
+        </blockquote>
 
-    <h2>Introduction</h2>
-    <div class="mg-1">
-        <p>MControl is a MVC light framework. It was developed with KISS principle in mind,
-            (aka. Keep It Simple, Stupid).
-        </p>
-        <p>MC.Controller class is provided for implementing controller behavior:
-            MVC Controllers are responsible for controlling the flow of the application execution.
-        </p>
-        <p> Provided features are :
-            <ul>
-                <li>interpolated javascript model expression in HTML : {&#8203;{ js expression }&#8203;}
-                </li>
-                <li>two-way binding beetween input element and model property: m-bind:value="property"</li>
-                <li>event handling binded to controller method: m-on:event=" this.method($event) "</li>
-                <li>collection of dom elements through 'm-ref' modifier labeling labeling"</li>
-            </ul>
-        </p>
-        <h2>MC Concepts</h2>
-        <p>Controllers are javascript ES6 classes</p>
-        <p>No Virtual DOM</p>
-        <p>Attribute modifiers 'm-on:...' or 'attribute</p>
-        <h2>MVC</h2>
-        <p></p>
-        <h2>Controller</h2>
-        <p></p>
-        <h2>Dynamic properties</h2>
-        <p></p>
-        <h2>Data bindings</h2>
-        <p></p>
+        <h2>Introduction</h2>
+        <div class="mg-1">
+            <p>MControl is a MVC light framework. </p>
+            <p>MC.Controller class is provided for implementing controller behavior:
+                MVC Controllers are responsible for controlling the flow of the application execution.
+            </p>
+            <p> Provided features are :
+                <ul>
+                    <li>interpolated javascript model expression in HTML : {&#8203;{ js expression }&#8203;}
+                    </li>
+                    <li>two-way binding beetween input element and model property: m-bind:value="property"</li>
+                    <li>event handling binded to controller method: m-on:event=" this.method($event) "</li>
+                    <li>collection of dom elements through 'm-ref' modifier labeling labeling"</li>
+                </ul>
+            </p>
+
+            <h3>No other library </h3>
+            <p>MC don't embed third party libraries, feel free to use it in your app code. This
+                choice avoid you conflicts when you embed MC with others open source components
+                and keep MC small.
+            </p>
+            <blockquote>“If debugging is the process of removing software bugs,
+                then programming must be the process of putting them in.”
+                <cite>- Edsger Dijkstra</cite>
+            </blockquote>
+    
+
+            <h3>No Virtual DOM</h3>
+            <p>MC don't use virtual DOM, My opinion is that we don't need (and don't like) to use an other
+                language to explain the HTML I already know. That's why decorating HTML with new attributes
+                ignored by browsers seemed to me less invasive and let your HTML knowledge valid and reusable.
+            </p>
+            <blockquote>“We are dwarfs on the shoulders of giants.”
+                <cite>- Bernard de Chartres</cite>
+            </blockquote>
+
+            <h3>KISS principle</h3>
+            <p>Keep it simple and small is my KISS principle (And i hope not too much stupid).
+                MC is actualy 700 lines of code. I tried and will try to do my best to keep it small
+                for a reduced load time, to keep a low memory footprint and have good performance.
+            </p>
+            <blockquote>“Measuring programming progress by lines of code is like measuring aircraft 
+                building progress by weight.”
+                <cite>- Bill Gates</cite>
+            </blockquote>
+
+            <h2>MC Concepts</h2>
+            <p>Controllers are javascript ES6 classes</p>
+            <p>Modifiers</p>
+            <p>For MC modifiers are new attributes added to HTML language.
+                <ul>
+                    <li>All modifiers start with 'm-' prefix to avoid clash name with html standard attributes<br>
+                        ex: m-control , m-bind, m-class, ...
+                    </li>
+                    <li>Some modifiers are extended with identifiers to define parameters of the modifier<br>
+                        ex: mb-bind:value to indicate the node property to binded
+                    </li>
+                    <li>Some modifiers have a value to describe its behavior<br>
+                        ex: m-style:text-align="µ.alignement"
+                    </li>
+                </ul>
+
+            </p>
+            <h2>MVC</h2>
+            <p></p>
+            <h2>Controller</h2>
+            <p></p>
+            <h2>Dynamic properties</h2>
+            <p></p>
+            <h2>Data bindings</h2>
+            <p></p>
+        </div>
     </div>
 </body>
+
 </html>
