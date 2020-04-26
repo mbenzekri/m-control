@@ -83,15 +83,15 @@
                     const ctrlclass = this.classes.get(ctrlname)
                     if (!ctrlclass)
                         return console.error(`MControl start error Controller '${ctrlname}' isn't defined at  at ${elem.outerHTML.substr(0, 50)}`)
-                    try {
+                    // try {
                         // @ts-ignore
                         appelem.$mcontrol = new ctrlclass()
                         // --- start controller
                         // @ts-ignore
                         appelem.$mcontrol.$start(appelem)
-                    } catch (e) {
-                        return console.error(`MControl creation error for '${ctrlname}' :  ${e.message} at ${appelem.outerHTML.substr(0, 50)}`)
-                    }
+                    // } catch (e) {
+                    //     return console.error(`MControl creation error for '${ctrlname}' :  ${e.message} at ${appelem.outerHTML.substr(0, 50)}`)
+                    // }
                 })
             })
         }
@@ -101,7 +101,7 @@
          * This in an INTERNAL method dont use it
          */
         $renderloop() {
-            this.controllers.forEach(ctrl => ctrl.dirty && ctrl.$render())
+            this.controllers.forEach(ctrl => ctrl.ready && ctrl.dirty && ctrl.$render())
             requestAnimationFrame(_ => this.$renderloop());
         }
         /**
@@ -135,28 +135,25 @@
      * The Controller class is the controller component of the MVS design pattern
      * Model–view–controller (usually known as MVC) is a software design pattern commonly used for developing user interfaces 
      * (see Wikipedia  https://en.wikipedia.org/wiki/Model-view-controller )
-     * @property #recording {boolean}  true wen recording access to dynamic properties 
      * @property {Map<number,Node>} #renderers store all the node renderers (attribute m-xxx and text for m-text)
      *                              a property $mrender is added at controller compile time to render the ui for the modifier
      * @property {HTMLElement} #element the root element labeled by the 'm-control' modifier
      * @property {Node[]} #recording true wen recording access to dynamic properties 
      */
     class Controller {
-        #recording = false
         #renderers = new Map()
         #access = {}
         #element = null
         #model = null
         #usedby = new Map()
         #outdated = new Map()
+        #ready = false
         constructor() {
             this.refs = {}
-            this.#model = new Dynamic(
-                {},
-                (path, version) => { if (this.#recording) this.#access[path] = version },
-                (path, version) => this.outdate(path, version)
-            )
+            this.#model = new Dynamic({})
+            this.#model.$listen('all', '*', (type, path, version) => this.outdate(path, version))
         }
+        get ready() { return this.#ready }
         get model() { return this.#model }
         get element() { return this.#element }
         get propnames() { return Object.keys(this.#model) }
@@ -170,7 +167,7 @@
 
             const collected = []
             // collect the items to compile
-            const elemlist = [root, ... root.querySelectorAll("*")]
+            const elemlist = [root, ...root.querySelectorAll("*")]
             for (let elem of elemlist) {
                 if (elem.nodeType === Node.COMMENT_NODE && elem.$arraypath) {
                     collected.push({ type: 'm-for', elem, attr: elem })
@@ -230,28 +227,30 @@
         }
         $render(full = false) {
             const torender = full ? this.#renderers : this.outdatedlist
-            // this.#renderers contain a list off dom object attributes / text /HTMLElement
-            torender.forEach(item => {
+            // torender contains a list triplet of [node,path,version] 
+            // node is the dom to render (with $mrender function) : attributes / text / HTMLElement
+            // path is the path into model of the outdated data
+            // version is the new version of the data found in path
+            torender.forEach(renderitem => {
+                let dummy
+                const [item, path, version] = Array.isArray(renderitem) ? renderitem : [renderitem]
                 const elem = (item.nodeType === Node.ATTRIBUTE_NODE || item.nodeType === Node.TEXT_NODE) ? parentNode(item) : item
-                const params = [this, elem, item, this.model]
-                try {
-                    // record properties access during rendering
-                    this.#recording = true
-                    this.#access = item.$mversion
-                    // render
+                const params = [this, elem, item, this.model, path, version]
+                // record properties access during rendering
+                this.model.$startrecord(item.$mversion)
+                try { // render
                     item.$mrender.call(...params)
-                    // stop recording
-                    this.#recording = false
-                    this.$setdependencies(item, this.#access)
-                    //const versions = Object.keys(this.#access).map(k => `read path ${k} version=${this.#access[k]}`).join('\n')
-                    this.#access = {}
-                    // show collected versions
-                    //versions && console.log(versions)
-
                 } catch (e) {
                     this.$error(`during rendering ${item.name}`, elem, e)
                 }
+                // stop recording
+                this.model.$stoprecord()
+                // store dependencies
+                if (full) Object.keys(item.$mversion).forEach(key => item.$mversion[key] = 0)
+                this.$setdependencies(item, item.$mversion)
             })
+            if (full) this.$render()
+            this.#ready = true
         }
         $setdependencies(node, accesses) {
             Object.keys(accesses).forEach(path => {
@@ -273,11 +272,11 @@
 
         get outdatedlist() {
             const olist = new Map()
-            this.#outdated.forEach((newversion, newpath) => {
-                const list = this.#usedby.get(newpath)
+            this.#outdated.forEach((newversion, path) => {
+                const list = this.#usedby.get(path)
                 list && list.forEach((version, inode) => {
                     const node = this.#renderers.get(inode)
-                    if (newversion > version) olist.set(node.$minode, node)
+                    if (newversion > version) olist.set(node.$minode, [node, path, version])
                 })
             })
             this.#outdated = new Map()
@@ -323,19 +322,22 @@
             var fragment = document.importNode(template.content, true);
             previous.after(fragment)
             const newnode = previous.nextElementSibling
-            Object.keys(scope).forEach( varname => {
+            this.$setScope(newnode,scope)
+            this.$build(newnode)
+            return newnode
+        }
+        $setScope(node,scope) {
+            node.$rscope = []
+            node.$lscope = {}
+            Object.keys(scope).forEach(varname => {
                 const proppath = scope[varname]
                 const fragment = `
                     if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
                     let ${varname} = ${proppath};
                 `
-                if (!newnode.$rscope) newnode.$rscope = []
-                if (!newnode.$lscope) newnode.$lscope = {}
-                newnode.$rscope.push(fragment)
-                newnode.$lscope[varname] = proppath
+                node.$rscope.push(fragment)
+                node.$lscope[varname] = proppath
             })
-            this.$build(newnode)
-            return newnode
         }
     }
 
@@ -381,8 +383,9 @@
         'm-on': (ctrl, elem, attr) => {
             const scope = ctrl.$rightscopes(attr)
             const evtnames = attr.name.replace(/m-on:/, '').split('|')
-            const body = scope + `
+            const body = `
                 const µ=this.model; 
+                ${scope}
                 if (MC.debug) console.log("m-on rendering event=\${$event.name} handler=  ${attr.value.replace('\"', '\'')}");
                 ${attr.value}
             `
@@ -416,7 +419,7 @@
             try {
                 const body = `
                     const µ = this.model 
-                    ${ rscope }
+                    ${ rscope}
                     let _value_ = $event.target['${attrname}']
                     _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
                     if (MC.debug) {
@@ -459,28 +462,53 @@
          * @param {Attr} attr 
          */
         'm-for': function (ctrl, template, attr) {
-            const arraypath = attr.textContent 
-            const scope = ctrl.$rightscopes(attr)
-            const [type, varname, iname ] = attr.name.split(':')
-            const idxname =  iname || '$index'
+            const arraypath = attr.textContent
+            const rscope = ctrl.$rightscopes(attr)
+            const [type, varname, iname] = attr.name.split(':')
+            const idxname = iname || '$index'
             // associate listeners to changes 
             template.$listener = (type, path, property, node) => {
                 console.log(`event type=[${type}] on path='${path}' property='${property}' `)
             }
-            ctrl.model.$listen('push', arraypath,template.$listener)
-            ctrl.model.$listen('pop', arraypath,template.$listener)
-            ctrl.model.$listen('insert', arraypath,template.$listener)
-            ctrl.model.$listen('change', arraypath,template.$listener)
-            const body = scope + `
+            template.$tail = template
+            ctrl.model.$listen('push', arraypath, template.$listener)
+            ctrl.model.$listen('pop', arraypath, template.$listener)
+            ctrl.model.$listen('insert', arraypath, template.$listener)
+            ctrl.model.$listen('change', arraypath, template.$listener)
+            const body = rscope + `
                 const _array_ = ${arraypath}
-                let _previous_ = $node
-                _array_.forEach(( _item_, _i_ ) => {
-                    if (MC.debug) console.log("m-for rendering loop array=%s index=%s ",${arraypath},${idxname})
-                    const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
-                    _previous_ = this.$addNode(_previous_,$node,_scope_)
-                })
+                const _itempath_ = "${arraypath}[${idxname}]"
+                if (MC.debug) console.log(
+                    "m-for rendering loop array=%s index=%s path=%s version=%d",
+                    ${arraypath},${idxname},$path,$version
+                )
+                if(!$path || $path == '${arraypath}') {
+                    // initial or array ref change render all array
+                    this.$nodes = []
+                    _array_.forEach((_item_,_i_) => {
+                        const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                        const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
+                        this.$nodes[_i_] = _newnode_ 
+                        $node.$tail = _newnode_
+                    })
+                } else {
+                    // const _i_ = parseInt($path.replace(/^.*\[(\d+)\]$/,'$1'))
+                    // const _node_ = this.$nodes.[i]
+                    // if (_nodes) { 
+                    //     // item changed in array
+                    //     const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                    //     this.$setScope(_node_,$node,_scope_)
+                    //     this.build(_node_)
+                    // } else {
+                    //     // item added in array
+                    //     const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                    //     $node.$tail = this.$insert($node.$tail,$node,_scope_)
+                    //     this.$nodes[_i_] = $node.$tail 
+                    // }
+                }
+                //@ sourceURL=array_listener_${arraypath}.js
             `
-            return ['$node', '$attr', 'µ', '$type', '$path', body]
+            return ['$node', '$attr', 'µ', '$path', '$version', body]
         }
     }
     /** ---------------
@@ -517,19 +545,29 @@
             },
             ownKeys: (target) => [...target.childNodes].map(node => node.nodeName),
         }
+        #access = null
 
         /**
          * @param {Object} data data to be managed and observed
-         * @param {(path:string,version:number) => void} onread listener for data tree properties 
          * @param {(path:string,version:number) => void} onupdate listener for data tree properties updates
          */
-        constructor(data, onread, onupdate) {
-            this.onread = onread || (() => 0)
+        constructor(data, onupdate) {
             this.onupdate = onupdate || (() => 0)
             this.listeners = new Map()
             const root = document.implementation.createDocument(null, '_____dyn', modeltype).documentElement
             if (!(data instanceof Object))
                 throw new Error(`Only object can be domified, type '${typeof data}'' was provided`)
+
+            // listen for changes 
+            var observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    const version = this.getversion(mutation.target)
+                    const path = this.path(mutation.target)
+                    //console.log(`mutation type=%s path=%s`, mutation.type, path, version)
+                    this.trigger('change', path, version)
+                })
+            });
+            observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['version'] });
 
             // recursively add data values in root XML document
             Object.getOwnPropertyNames(data).forEach(property => {
@@ -537,30 +575,6 @@
                 this.setproperty(root, property, value)
             })
 
-            // add listener for xml tree change text nodes
-            /**
-             * @param {DocumentEvent} event
-             */
-            root.addEventListener('DOMNodeInserted', event => {
-                // @ts-ignore
-                if (event.target.nodeName === '#text') {
-                    // @ts-ignore
-                    const node = event.target.parentNode
-                    const path = this.path(node)
-                    const version = this.getversion(node)
-                    this.onupdate(path, version)
-                    if (MC.debug) console.log(`Event model change at '${path}' version=${version}`)
-                }
-            })
-
-            // root.addEventListener('DOMNodeRemoved', event => {
-            //     // this.onchange(this.path(event.target),event)
-            //     // if (event.target.nodeName === '#text') return
-            // })
-            // root.addEventListener('DOMCharacterDataModified', event => {
-            //     //this.onupdate(this.path(event.target),event)
-            // })
-            // @ts-ignore
             return new Proxy(root, this.#handler)
         }
 
@@ -585,11 +599,11 @@
             if (!found) return this.getmethod(node, property)
 
             // if version property requested
-            const version = parseInt(found.getAttribute('version'))
+            const version = this.getversion(found)
             if (vread) return version
 
-            // trigger access event
-            this.onread(this.path(found), version)
+            // store access version if expected
+            if (this.#access) this.#access[this.path(found)] = version
 
             // extract and return property as Dynamic object (Proxy)
             const type = found.getAttribute('type')
@@ -646,14 +660,16 @@
             if (/\d+/.test(property) || typeof property === 'number') property = `_${property}`
             let found = [...node.childNodes].find(child => child.nodeName === property)
             const type = this.getvaluetype(value)
-            let current
+            let current, version
             if (found) {
                 current = found
-                current.setAttribute('version', parseInt(found.getAttribute('version')) + 1)
+                version = parseInt(found.getAttribute('version')) + 1
+                current.setAttribute('version', version)
             } else {
                 current = node.ownerDocument.createElement(property)
+                version = 1
                 node.appendChild(current)
-                current.setAttribute('version', 1)
+                current.setAttribute('version', version)
             }
             current.setAttribute('type', type)
 
@@ -675,7 +691,7 @@
                     value.forEach((value, index) => {
                         this.setproperty(current, index, value)
                     })
-                    this.trigger('change', current, property)
+                    /// this.trigger('change', this.path(node,property), property)
                     break
                 case 'object':
                     current.textContent = ''
@@ -699,14 +715,14 @@
             }
             return path.join('.').replace(/\._(\d+)/g, '[$1]')
         }
-        trigger(type, node, property) {
-            const path = this.path(node)
-            const key = `${type}/${path}`
-            if (this.listeners.has(key)) {
-                this.listeners.get(key).forEach((listener => {
-                    listener(type, path, property, node);
-                }))
-            }
+        trigger(type, path, version) {
+            [`${type}/${path}`, 'all/*'].forEach(key => {
+                if (this.listeners.has(key)) {
+                    this.listeners.get(key).forEach((listener => {
+                        listener(type, path, version);
+                    }))
+                }
+            })
         }
         /**
          * extract item id from a node array item 
@@ -740,9 +756,10 @@
         getmethod(node, property) {
             if (property === '$listen') {
                 return (type, path, listener) => {
-                    if (/^(push|pop|insert|change)$/.test(type)) {
-                        const key = `${type}/${path}`
+                    if (/^(all|push|pop|insert|change)$/.test(type)) {
+                        const key = `${type}/${(type === 'all') ? '*' : path}`
                         const list = this.listeners.get(key) || []
+                        if (list.length === 0) this.listeners.set(key, list)
                         list.push(listener)
                     } else {
                         console.log(`Dynamic $listen() type '${type}' unknown `)
@@ -758,6 +775,9 @@
                     })
                 }
             }
+            if (property === '$startrecord') return (versions) => this.#access = versions
+            if (property === '$stoprecord') return () => this.#access = null
+
             switch (node.getAttribute('type')) {
                 case 'array': {
                     switch (property) {

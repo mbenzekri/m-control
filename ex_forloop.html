@@ -29,35 +29,38 @@
             <thead>
                 <tr>
                     <td>#</td>
-                    <template m-for:letter="µ.letters">
-                        <td>
+                    <template m-for:letter="this.letters">
+                        <td >
                             {{ letter }}
                         </td>
                     </template>
                     <td>total</td>
                 </tr>
-            </thead>
-            <tbody>
-                <template m-for:item:i=µ.table><tr>
-                    <td> {{ i }} </td>
-                    <template m-for:letter="µ.letters"><td>
-                            <input m-bind:value="item[letter]" type="number" onfocus="this.select()"
-                                onmouseup="return false" size=5 />
-                    </td></template>
-                    <td> {{ this.sumline(item) }} </td>
-                </tr></template>
-            </tbody>
-            <tfoot>
                 <tr>
                     <td> </td>
-                    <template m-for:letter="µ.letters">
-                        <td>
+                    <template m-for:letter="this.letters">
+                        <td  m-on:click="this.setcol(letter)" >
                             {{ this.sumcol(letter) }}
                         </td>
                     </template>
                     <td> </td>
                 </tr>
-            </tfoot>
+
+            </thead>
+            <tbody>
+                <template m-for:item:i=µ.table>
+                    <tr>
+                        <td m-on:click="this.setline(i)"> {{ i }} </td>
+                        <template m-for:letter="this.letters">
+                            <td>
+                                <input m-bind:value="item[letter]" type="number" onfocus="this.select()"
+                                    onmouseup="return false" size=5 />
+                            </td>
+                        </template>
+                        <td> {{ this.sumline(item) }} </td>
+                    </tr>
+                </template>
+            </tbody>
         </table>
     </fieldset>
 </body>
@@ -69,11 +72,10 @@
             super(element)
             // constants 
             this.count = 10
+            this.letters = ['A', 'B', 'C', 'D', 'E']
             // dynamics
-            this.model.letters = ['A', 'B', 'C', 'D', 'E']
             this.model.table = []
-            for (let i = 0; i < this.count; i++)
-                this.model.table[i] = { A: 1, B: 2, C: 3, D: 4, E: 5 }
+            for (let i = 0; i < this.count; i++) this.setline(i)
         }
         rand(n) {
             return Math.floor(n * Math.random())
@@ -83,8 +85,18 @@
         }
         sumcol(letter) {
             let sum = 0;
-            this.model.table.forEach( item => sum+=item[letter])
+            this.model.table.forEach(item => sum += item[letter])
             return sum
+        }
+        setcol(letter) {
+            this.model.table.forEach(item => item[letter] = this.rand(10000))
+        }
+        setline(i) {
+            const newitem = this.letters.reduce((item, letter) => {
+                item[letter] = this.rand(10000)
+                return item
+            }, {})
+            this.model.table[i] = newitem
         }
     }
 
