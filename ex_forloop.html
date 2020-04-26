@@ -37,7 +37,7 @@
                     <td>total</td>
                 </tr>
                 <tr>
-                    <td> </td>
+                    <td m-on:click="this.addline()"> </td>
                     <template m-for:letter="this.letters">
                         <td  m-on:click="this.setcol(letter)" >
                             {{ this.sumcol(letter) }}
@@ -87,6 +87,13 @@
             let sum = 0;
             this.model.table.forEach(item => sum += item[letter])
             return sum
+        }
+        addline() {
+            const newitem = this.letters.reduce((item, letter) => {
+                item[letter] = this.rand(10000)
+                return item
+            }, {})
+            this.model.table.push(newitem)
         }
         setcol(letter) {
             this.model.table.forEach(item => item[letter] = this.rand(10000))

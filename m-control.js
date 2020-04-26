@@ -246,7 +246,7 @@
                 // stop recording
                 this.model.$stoprecord()
                 // store dependencies
-                if (full) Object.keys(item.$mversion).forEach(key => item.$mversion[key] = 0)
+                //if (full) Object.keys(item.$mversion).forEach(key => item.$mversion[key] = 0)
                 this.$setdependencies(item, item.$mversion)
             })
             if (full) this.$render()
@@ -484,27 +484,23 @@
                 )
                 if(!$path || $path == '${arraypath}') {
                     // initial or array ref change render all array
-                    this.$nodes = []
+                    $node.$nodes = []
                     _array_.forEach((_item_,_i_) => {
                         const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
                         const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
-                        this.$nodes[_i_] = _newnode_ 
+                        $node.$nodes[_i_] = _newnode_ 
                         $node.$tail = _newnode_
                     })
                 } else {
-                    // const _i_ = parseInt($path.replace(/^.*\[(\d+)\]$/,'$1'))
-                    // const _node_ = this.$nodes.[i]
-                    // if (_nodes) { 
-                    //     // item changed in array
-                    //     const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
-                    //     this.$setScope(_node_,$node,_scope_)
-                    //     this.build(_node_)
-                    // } else {
-                    //     // item added in array
-                    //     const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
-                    //     $node.$tail = this.$insert($node.$tail,$node,_scope_)
-                    //     this.$nodes[_i_] = $node.$tail 
-                    // }
+                    const _i_ = parseInt($path.replace(/^.*(\\d+)\\]$/,'$1'))
+                    const _node_ = $node.$nodes[_i_]
+                    if (!_node_) { 
+                        // item changed in array
+                        const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                        const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
+                        $node.$nodes[_i_] = _newnode_ 
+                        $node.$tail = _newnode_
+                    }
                 }
                 //@ sourceURL=array_listener_${arraypath}.js
             `
@@ -563,11 +559,11 @@
                 mutations.forEach((mutation) => {
                     const version = this.getversion(mutation.target)
                     const path = this.path(mutation.target)
-                    //console.log(`mutation type=%s path=%s`, mutation.type, path, version)
+                    console.log(`mutation type=%s path=%s version=%d nodes=%d`, mutation.type, path, version,mutation.addedNodes.length)
                     this.trigger('change', path, version)
                 })
             });
-            observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['version'] });
+            observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['version'] });
 
             // recursively add data values in root XML document
             Object.getOwnPropertyNames(data).forEach(property => {
@@ -740,19 +736,6 @@
         arr_length(node) {
             return node.childNodes.lentgh
         }
-        /**
-         * allocate new itemid node.nodeName to extract item id number '_12' to 12
-         * @param {Element} arrnode 
-         * @returns {number}
-         */
-        arr_nextitemid(arrnode) {
-            let index = parseInt(arrnode.getAttribute('sequence'))
-            if (isNaN(index)) index = 0
-            index++
-            arrnode.setAttribute('sequence', index.toString())
-            return index
-        }
-
         getmethod(node, property) {
             if (property === '$listen') {
                 return (type, path, listener) => {
@@ -783,9 +766,9 @@
                     switch (property) {
                         case 'toJSON':
                             return () => [...node.childNodes].map((child, i) => this.getproperty(node, i.toString()));
-                        case '$push':
+                        case 'push':
                             return (value) => {
-                                const index = this.arr_nextitemid(node)
+                                const index = node.childElementCount + 1
                                 this.setproperty(node, index, value);
                             }
                         case 'forEach':
