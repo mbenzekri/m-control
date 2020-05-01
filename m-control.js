@@ -365,6 +365,7 @@
                     Object.keys(_value_).forEach(classname =>
                         _value_[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
                     ) 
+                //@ sourceURL=m-class-${attr.value}.js
             `
             const params = ['$node', '$attr', 'µ', body]
             return params
@@ -563,7 +564,7 @@
                     this.trigger('change', path, version)
                 })
             });
-            observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['version'] });
+            observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['version'] });
 
             // recursively add data values in root XML document
             Object.getOwnPropertyNames(data).forEach(property => {
@@ -584,7 +585,7 @@
             // version number for property may be requested adding $v to property name
             // ex: µ.prop1,prop2$v
             // check if version number requested
-            const vread = (typeof property !== 'number') && property.endsWith('$v')
+            const vread = (typeof property === 'string') && property.endsWith('$v')
             property = vread ? property.replace(/\$v$/, '') : property
 
             // search fo property first

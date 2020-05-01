@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
         crossorigin="anonymous">
     <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
-    <script src="./m-control.js"></script>
+    <script src="../m-control.js"></script>
     <script src="./m-example.js"></script>
 </head>
 
@@ -32,7 +32,7 @@
 
     <fieldset  m-control="MCtrlExample">
         <legend>The demo :</legend>
-        <input m-on:click="this.code()" type=button value="see code">
+        <input m-on:click="this.code()" style="float: right;" type=button value="see code">
         <div>
             <p><label>Choose text alignement : </label><select m-bind:value=µ.align>
                 <option value="center">center</option>

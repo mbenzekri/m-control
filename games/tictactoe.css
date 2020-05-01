@@ -1,0 +1,39 @@
+table {
+    position: absolute;
+    left: calc(50% - 30vh);
+    width: 60vh;
+    height: 60vh;
+    box-shadow: 10px 5px 5px gray;
+}
+
+td {
+    width: 20vh;
+    height: 20vh;
+    border: 2px solid blue;
+    text-align: center;
+    padding: 3px;
+}
+
+h1,
+div {
+    text-align: center;
+}
+body {
+    padding: 5px;
+    background: linear-gradient(180deg,white, lightgray);
+}
+.left {
+    float: left;
+    box-shadow: 10px 5px 5px gray;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid lightgray;
+}
+
+.right {
+    float: right;
+    box-shadow: 10px 5px 5px gray;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid lightgray;
+}

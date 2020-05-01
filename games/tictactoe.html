@@ -1,0 +1,113 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="./tictactoe.css">
+    <script src="../m-control.js"></script>
+</head>
+
+<body class=pure m-control=TicTacToe>
+
+
+    <h1> TIC TAC TOE
+        <hr>
+    </h1>
+    <div>
+        <span class="pure-form left">
+            <label>Player : <i class="fa fa-2x fa-circle-o"></i><hr></label>
+            <input type=text m-bind:value=µ.players[0].name>
+             
+        </span>
+        <span class="pure-form right">
+            <label>Player : <i class="fa fa-2x fa-times"></i><hr></label>
+            <input type=text m-bind:value=µ.players[1].name>
+        </span>
+        
+        <h1>{{ this.player.name  }}'s turn <br>you play with <i class="fa" m-class="this.class[this.player.pawn]"></i></h1>
+    </div>
+
+    <h1 m-bind:hidden=µ.hidewinner> And the winner is {{ (µ.winner == -1) ? '...' : µ.players[µ.winner].name }}
+        <button m-on:click=this.reset() class="pure-button pure-button-primary "> Play again</button></h2>
+        <br>
+        <table>
+            <tbody>
+                <template m-for:line:i=µ.board>
+                    <tr>
+                        <template m-for:cell:j=line>
+                            <td m-on:click="this.play(i,j)"> <i m-class="this.class[cell]" class="fa fa-4x"></i></td>
+                        </template>
+                    </tr>
+                </template>
+                </tr>
+            </tbody>
+        </table>
+
+</body>
+
+<script>
+    class TicTacToe extends MC.Controller {
+
+        constructor(element) {
+            super(element)
+            this.class = {
+                "X": { "fa-circle-o": 0, "fa-times": 1 },
+                "O": { "fa-circle-o": 1, "fa-times": 0 },
+                "-": { "fa-circle-o": 0, "fa-times": 0 }
+            }
+            this.model.board = [['-', '-', '-',], ['-', '-', '-',], ['-', '-', '-',]]
+            this.model.turn = 0
+            this.model.players = [
+                { name: "Tic", pawn: 'O', },
+                { name: "Tac", pawn: 'X', }
+            ]
+            this.reset()
+        }
+        play(i, j) {
+            if (this.model.winner < 0) {
+                this.model.board[i][j] = this.player.pawn
+                this.model.turn += 1
+                this.model.current = this.model.turn % 2
+                this.check()
+            }
+        }
+        get player() {
+            return this.model.players[this.model.turn % 2]
+        }
+        check() {
+            const board = JSON.parse(JSON.stringify(this.model.board))
+            // lines
+            for (let line of board) {
+                if (line.every((v, i, a) => v === a[0])) return this.winner(line[0])
+            }
+            // columns (reversed lines)
+            for (let col of board.map((v, i, a) => [a[0][i], a[1][i], a[2][i]])) {
+                if (col.every((v, i, a) => v === a[0])) return this.winner(col[0])
+            }
+            // diagonals
+            if ([0, 1, 2].every((v, i) => board[i][i] === board[1][1])) return this.winner(board[1][1])
+            if ([0, 1, 2].every((v, i) => board[i][2 - i] === board[1][1])) return this.winner(board[1][1])
+
+        }
+        winner(pawn) {
+
+            this.model.winner = (pawn === '-') ? -1 : (pawn === 'O') ? 0 : 1
+            if (this.model.winner >= 0) this.model.hidewinner = undefined
+        }
+        reset() {
+            this.model.board.forEach(line => line.forEach((v, i) => line[i] = '-'))
+            this.model.winner = -1
+            this.model.turn = Date.now() % 2
+            this.model.hidewinner = true
+        }
+
+    }
+
+    window.addEventListener('load', _ => {
+        MControl.register(TicTacToe)
+        MControl.start()
+    })
+
+</script>
+
+</html>

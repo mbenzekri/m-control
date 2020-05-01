@@ -1,6 +1,6 @@
 import { Store } from './store.js';
-import './m-control.js';
-import './m-example.js';
+import '../m-control.js';
+import '../m-example.js';
 
 var store = new Store();
 
