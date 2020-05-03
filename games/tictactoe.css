@@ -9,7 +9,7 @@ table {
 td {
     width: 20vh;
     height: 20vh;
-    border: 2px solid blue;
+    border: 2px solid royalblue;
     text-align: center;
     padding: 3px;
 }
@@ -20,7 +20,8 @@ div {
 }
 body {
     padding: 5px;
-    background: linear-gradient(180deg,white, lightgray);
+    background-color:black;
+    color: royalblue;
 }
 .left {
     float: left;

@@ -84,11 +84,11 @@
                     if (!ctrlclass)
                         return console.error(`MControl start error Controller '${ctrlname}' isn't defined at  at ${elem.outerHTML.substr(0, 50)}`)
                     // try {
-                        // @ts-ignore
-                        appelem.$mcontrol = new ctrlclass()
-                        // --- start controller
-                        // @ts-ignore
-                        appelem.$mcontrol.$start(appelem)
+                    // @ts-ignore
+                    appelem.$mcontrol = new ctrlclass()
+                    // --- start controller
+                    // @ts-ignore
+                    appelem.$mcontrol.$start(appelem)
                     // } catch (e) {
                     //     return console.error(`MControl creation error for '${ctrlname}' :  ${e.message} at ${appelem.outerHTML.substr(0, 50)}`)
                     // }
@@ -187,7 +187,6 @@
             for (let opts of collected) {
                 // for loop attr parent node had been replace by a comment node
                 const params = compile[opts.type](this, opts.elem, opts.attr)
-
                 try {
                     if (!params) continue
                     opts.attr.$minode = MC.nextid()
@@ -196,6 +195,7 @@
                     this.#renderers.set(opts.attr.$minode, opts.attr)
                 } catch (e) {
                     this.$error(`during build for ${opts.type} compile/bindings`, e, opts.elem)
+                    console.error(params)
                 }
             }
         }
@@ -322,11 +322,11 @@
             var fragment = document.importNode(template.content, true);
             previous.after(fragment)
             const newnode = previous.nextElementSibling
-            this.$setScope(newnode,scope)
+            this.$setScope(newnode, scope)
             this.$build(newnode)
             return newnode
         }
-        $setScope(node,scope) {
+        $setScope(node, scope) {
             node.$rscope = []
             node.$lscope = {}
             Object.keys(scope).forEach(varname => {
@@ -344,13 +344,9 @@
     // ---------------------------------
     // INTERNAL FUNCTION 
     // ---------------------------------
-
-    /**
-     * Parse a HTML DOM tree to collect and managed attributes (m-ref, m-class)
-     * compile rendering functions and add listener bindings  
-     * @param {HTMLElement} elem root dom element to start search
-     * @return {HTMLElement[]} node list found
-     */
+    function quote(text) {
+        return text.replace(/'/g,"\\'")
+    }
     const compile = {
         'm-ref': (ctrl, elem, attr) => {
             ctrl.refs[attr.value] = elem;
@@ -395,6 +391,7 @@
                 evtnames.forEach(evtname => elem.addEventListener(evtname, func))
             } catch (e) {
                 ctrl.$error(`during build for event ${attr.name} binding`, e, elem)
+                console.error(body)
             }
             return null
         },
@@ -402,14 +399,16 @@
             const scope = ctrl.$rightscopes(text)
             const body = scope + ` 
                 if (MC.debug) console.log('m-text rendering %s',$text.textContent)
+                try {
                 $text.textContent = \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\`;
+                } catch(e){}
             `
             return ['$node', '$text', 'µ', body]
         },
-        'm-bind': (ctrl, elem, attr) => {
+        'm-get': (ctrl, elem, attr) => {
             const rscope = ctrl.$rightscopes(attr)
             const lscope = ctrl.$leftscopes(attr)
-            const attrname = attr.name.replace(/m-bind:/, '')
+            const attrname = attr.name.replace(/m-[^:]*:/, '')
             let proppath = attr.value
             const proproot = proppath.replace(/(\.|\[).*$/, '')
             if (proproot in lscope) {
@@ -417,35 +416,45 @@
             }
 
             // create binding from input to model
+            const body = `
+                const µ = this.model 
+                ${ rscope}
+                let _value_ = $event.target['${attrname}']
+                _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
+                if (MC.debug) {
+                    console.log("input => model with %s=%s input=%s",'${quote(proppath)}',JSON.stringify(${proppath}), _value_)
+                }
+                ${proppath} = _value_
+            `
             try {
-                const body = `
-                    const µ = this.model 
-                    ${ rscope}
-                    let _value_ = $event.target['${attrname}']
-                    _value_ = ($event.target.type === 'number') ? (_value_ === '') ? 0 : parseFloat(_value_) : _value_
-                    if (MC.debug) {
-                        console.log(\`input => model with ${proppath}=\${JSON.stringify(${proppath})} input=\${ _value_ } \`)
-                        debugger
-                    }
-                    ${proppath} = _value_
-                `
                 const func = new Function('$event', body).bind(ctrl)
                 elem.addEventListener('change', func)
                 elem.addEventListener('input', func)
                 elem.addEventListener('paste', func)
             } catch (e) {
                 ctrl.$error(`during build for '${attr.name}' binding`, e, elem)
+                console.error(body)
             }
-
+        },
+        'm-set': (ctrl, elem, attr) => {
+            const rscope = ctrl.$rightscopes(attr)
+            const attrname = attr.name.replace(/m-[^:]*:/, '')
+            let proppath = attr.value
             // create binding from model to input
             const body = rscope + `
-                if (MC.debug) console.log("model => input with %s=%s (version:%d) input[%s]=%s", '${proppath}',JSON.stringify(${proppath}),999, $node.type,$node['${attrname}'])
+                if (MC.debug) console.log("model => input with %s=%s input/%s[%s]=%s", 
+                    '${quote(proppath)}', JSON.stringify(${proppath}),
+                    $node.type,'${quote(attrname)}',$node['${attrname}'])
                 $node['${attrname}'] = ${proppath}
             `
             return ['$node', '$attr', 'µ', body]
         },
+        'm-bind': (ctrl, elem, attr) => {
+            compile['m-get'](ctrl, elem, attr)
+            return compile['m-set'](ctrl, elem, attr)
+        },
         'm-with': (ctrl, elem, attr) => {
-            const varname = attr.name.replace(/m-with:/, '')
+            const varname = attr.name.replace(/m-[^:]*:/, '')
             const proppath = attr.value
             const fragment = `
                 if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
@@ -483,26 +492,32 @@
                     "m-for rendering loop array=%s index=%s path=%s version=%d",
                     ${arraypath},${idxname},$path,$version
                 )
-                if(!$path || $path == '${arraypath}') {
+                //if(!$path || $path == '${arraypath}') {
                     // initial or array ref change render all array
                     $node.$nodes = []
+                    while ($node.$tail && $node.$tail != $node) {
+                        const cur = $node.$tail
+                        $node.$tail = $node.$tail.previousElementSibling()
+                    }
+                    $node.$tail =$node
                     _array_.forEach((_item_,_i_) => {
                         const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
                         const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
                         $node.$nodes[_i_] = _newnode_ 
                         $node.$tail = _newnode_
                     })
-                } else {
-                    const _i_ = parseInt($path.replace(/^.*(\\d+)\\]$/,'$1'))
-                    const _node_ = $node.$nodes[_i_]
-                    if (!_node_) { 
-                        // item changed in array
-                        const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
-                        const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
-                        $node.$nodes[_i_] = _newnode_ 
-                        $node.$tail = _newnode_
-                    }
-                }
+                // } else {
+                //     debugger
+                //     const _i_ = parseInt($path.replace(/^.*(\\d+)\\]$/,'$1'))
+                //     const _node_ = $node.$nodes[_i_]
+                //     if (!_node_) { 
+                //         // item changed in array
+                //         const _scope_ = {  "${idxname}" : _i_ , "${varname}" : "${arraypath}[${idxname}]"}
+                //         const _newnode_ = this.$addNode($node.$tail,$node,_scope_)
+                //         $node.$nodes[_i_] = _newnode_ 
+                //         $node.$tail = _newnode_
+                //     }
+                //}
                 //@ sourceURL=array_listener_${arraypath}.js
             `
             return ['$node', '$attr', 'µ', '$path', '$version', body]
@@ -560,7 +575,7 @@
                 mutations.forEach((mutation) => {
                     const version = this.getversion(mutation.target)
                     const path = this.path(mutation.target)
-                    console.log(`mutation type=%s path=%s version=%d nodes=%d`, mutation.type, path, version,mutation.addedNodes.length)
+                    //console.log(`mutation type=%s path=%s version=%d nodes=%d`, mutation.type, path, version, mutation.addedNodes.length)
                     this.trigger('change', path, version)
                 })
             });
@@ -590,7 +605,7 @@
 
             // search fo property first
             const found = (node.getAttribute('type') === 'array' && /\d+/.test(property))
-                ? this.arr_item(node, parseInt(property))
+                ?   node.childNodes[parseInt(property)]
                 : [...node.childNodes].find(child => child.nodeName === property)
             // search method instead
             if (!found) return this.getmethod(node, property)
@@ -633,13 +648,6 @@
          */
         getnodeproperty(node, property) {
             return [...node.childNodes].find(child => child.nodeName === property)
-        }
-        /**
-         * 
-         * @param {Element} node 
-         */
-        getnodetype(node) {
-            return node.getAttribute('type')
         }
         /**
          * 
@@ -721,22 +729,6 @@
                 }
             })
         }
-        /**
-         * extract item id from a node array item 
-         * the attribute 'sequence' of the array node stores the last
-         * allocted to extract item id number '_12' to 12
-         * @param {Node} node 
-         * @returns {number}
-         */
-        arr_itemid(node) {
-            return parseInt(node.nodeName.replace(/[^\d]+/, ''))
-        }
-        arr_item(node, index) {
-            return node.childNodes[index]
-        }
-        arr_length(node) {
-            return node.childNodes.lentgh
-        }
         getmethod(node, property) {
             if (property === '$listen') {
                 return (type, path, listener) => {
@@ -763,28 +755,46 @@
             if (property === '$stoprecord') return () => this.#access = null
 
             switch (node.getAttribute('type')) {
-                case 'array': {
-                    switch (property) {
-                        case 'toJSON':
-                            return () => [...node.childNodes].map((child, i) => this.getproperty(node, i.toString()));
-                        case 'push':
-                            return (value) => {
-                                const index = node.childElementCount + 1
-                                this.setproperty(node, index, value);
-                            }
-                        case 'forEach':
-                            return (F => {
-                                for (let i = 0; i < node.childNodes.length; i++) {
-                                    F(this.getproperty(node, i), i)
-                                }
-                            })
-                        case 'length':
-                            return node.childNodes.length
-                    }
-                }
+                case 'array': return this.get_array_method(node,property)
                 default: return undefined
             }
 
+        }
+        get_array_method(node,property) {
+            switch (property) {
+                case 'toJSON':
+                    return () => [...node.childNodes]
+                        .map((child, i) => this.getproperty(node, i.toString())
+                    );
+                case 'push':
+                    return (value) => {
+                        const index = node.childElementCount + 1
+                        this.setproperty(node, index, value);
+                    }
+                case 'forEach':
+                    return (F => {
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            F(this.getproperty(node, i), i,new Proxy(node, this.#handler))
+                        }
+                    })
+                case 'every':
+                    return (F =>
+                        [...node.childNodes]
+                            .every((v,i,a) => F(this.getproperty(node, i),i,new Proxy(node, this.#handler)))
+                    )
+                case 'some':
+                    return (F =>
+                        [...node.childNodes]
+                            .some((v,i,a) => F(this.getproperty(node, i),i,new Proxy(node, this.#handler)))
+                        )
+                case 'reduce':
+                    return ((F,P)  =>
+                        [...node.childNodes]
+                            .reduce((p,v,i,a) => F(p,this.getproperty(node, i),i,new Proxy(node, this.#handler)),P)
+                        )
+                case 'length':
+                return node.childNodes.length
+            }
         }
     }
 

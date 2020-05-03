@@ -16,19 +16,24 @@
     <div>
         <span class="pure-form left">
             <label>Player : <i class="fa fa-2x fa-circle-o"></i><hr></label>
-            <input type=text m-bind:value=µ.players[0].name>
+            <input type=text m-bind:value="µ.players['O'].name">
              
         </span>
         <span class="pure-form right">
             <label>Player : <i class="fa fa-2x fa-times"></i><hr></label>
-            <input type=text m-bind:value=µ.players[1].name>
+            <input type=text m-bind:value="µ.players['X'].name">
         </span>
-        
-        <h1>{{ this.player.name  }}'s turn <br>you play with <i class="fa" m-class="this.class[this.player.pawn]"></i></h1>
+        <h1 m-set:hidden="!µ.winner"> 
+            {{ µ.winner.name  }} wins this game 
+            <button m-on:click=this.reset() class="pure-button pure-button-primary ">Play again</button>
+        </h1>
+        <h1 m-set:hidden="µ.winner"> 
+            {{ this.player.name  }}'s turn <br>you play with 
+            <i class="fa" m-class="this.class[this.player.pawn]"></i>
+        </h1>
     </div>
 
-    <h1 m-bind:hidden=µ.hidewinner> And the winner is {{ (µ.winner == -1) ? '...' : µ.players[µ.winner].name }}
-        <button m-on:click=this.reset() class="pure-button pure-button-primary "> Play again</button></h2>
+        
         <br>
         <table>
             <tbody>
@@ -55,50 +60,42 @@
                 "O": { "fa-circle-o": 1, "fa-times": 0 },
                 "-": { "fa-circle-o": 0, "fa-times": 0 }
             }
-            this.model.board = [['-', '-', '-',], ['-', '-', '-',], ['-', '-', '-',]]
+            this.model.board = Array(3).fill(Array(3).fill('-'))
             this.model.turn = 0
-            this.model.players = [
-                { name: "Tic", pawn: 'O', },
-                { name: "Tac", pawn: 'X', }
-            ]
+            this.model.players = {
+                'O' : { name: "Tic", pawn: 'O', },
+                'X': { name: "Tac", pawn: 'X', }
+            }
             this.reset()
         }
         play(i, j) {
-            if (this.model.winner < 0) {
-                this.model.board[i][j] = this.player.pawn
-                this.model.turn += 1
-                this.model.current = this.model.turn % 2
-                this.check()
-            }
+            if (this.model.winner) return
+            this.model.board[i][j] = this.player.pawn
+            this.model.winner = this.model.players[this.check()]
+            this.model.turn += 1
         }
         get player() {
-            return this.model.players[this.model.turn % 2]
+            return this.model.players[this.model.turn % 2 ? 'X' : 'O']
         }
         check() {
-            const board = JSON.parse(JSON.stringify(this.model.board))
             // lines
-            for (let line of board) {
-                if (line.every((v, i, a) => v === a[0])) return this.winner(line[0])
+            const board = this.model.board
+            for(let i=0; i<3;i++) {
+                if(board[i].every(pawn =>  (pawn !== '-') && (pawn === board[i][0]))) return board[i][0]
             }
-            // columns (reversed lines)
-            for (let col of board.map((v, i, a) => [a[0][i], a[1][i], a[2][i]])) {
-                if (col.every((v, i, a) => v === a[0])) return this.winner(col[0])
+            // columns
+            for(let i=0; i<3;i++) {
+                if([0, 1, 2].every(j => (board[j][i] !== '-') && (board[j][i] === board[0][i]))) return board[0][i]
             }
             // diagonals
-            if ([0, 1, 2].every((v, i) => board[i][i] === board[1][1])) return this.winner(board[1][1])
-            if ([0, 1, 2].every((v, i) => board[i][2 - i] === board[1][1])) return this.winner(board[1][1])
-
-        }
-        winner(pawn) {
-
-            this.model.winner = (pawn === '-') ? -1 : (pawn === 'O') ? 0 : 1
-            if (this.model.winner >= 0) this.model.hidewinner = undefined
+            if ([0, 1, 2].every((v, i) => board[i][i] === board[1][1])) return board[1][1]
+            if ([0, 1, 2].every((v, i) => board[i][2 - i] === board[1][1])) return board[1][1]
+            return false
         }
         reset() {
-            this.model.board.forEach(line => line.forEach((v, i) => line[i] = '-'))
-            this.model.winner = -1
-            this.model.turn = Date.now() % 2
-            this.model.hidewinner = true
+            this.model.board = Array(3).fill(Array(3).fill('-'))
+            this.model.winner = null
+            this.model.turn = Math.floor(Math.random()*1000) % 2
         }
 
     }

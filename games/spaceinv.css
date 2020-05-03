@@ -1,0 +1,67 @@
+
+@font-face {
+    font-family: 'Invaders';
+    src: url('./fonts/Invaders.eot');
+    src: url('./fonts/Invaders.eot?#iefix') format('embedded-opentype'),
+        url('./fonts/Invaders.woff2') format('woff2'),
+        url('./fonts/Invaders.woff') format('woff'),
+        url('./fonts/Invaders.ttf') format('truetype'),
+        url('./fonts/Invaders.svg#Invaders') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+@font-face {
+    font-family: 'Space Invaders';
+    src: url('./fonts/Space-Invaders.eot');
+    src: url('./fonts/Space-Invaders.eot?#iefix') format('embedded-opentype'),
+        url('./fonts/Space-Invaders.woff2') format('woff2'),
+        url('./fonts/Space-Invaders.woff') format('woff'),
+        url('./fonts/Space-Invaders.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+
+h1 {
+    text-align: center;
+}
+body {
+    padding: 5px;
+    font-family: 'Space Invaders';
+    overflow: hidden;
+    user-select: none;
+}
+
+.board {
+    position: relative;
+    left: calc(50% - 40vh);
+    top: calc(50% - 40vh);
+    width: 80vh;
+    height: 80vh;
+    border: solid white 1px;
+    overflow: hidden;
+    background-color:black;
+}
+
+table {
+    position:absolute;
+}
+
+invader {
+    font-family: 'Invaders';
+    font-size: 5mm;
+    position:absolute;
+}
+laser::before {
+    content: '-';
+}
+laser {
+    font-family: 'Invaders';
+    font-size: 5mm;
+    position:absolute;
+    bottom: 0;
+    color: greenyellow;
+}

@@ -1,0 +1,124 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="./spaceinv.css">
+    <script src="../m-control.js"></script>
+</head>
+
+<body class=pure m-control=SpaceInvaders m-on:wheel="this.wheel($event)" m-on:keydown="this.key($event)">
+    <h2 style="position:absolute;">Work in progress ...</h2>
+    <div style="font-family:'Invaders';font-size:4cm;top:40vh;position:absolute;">.</div>
+    <div class=board>
+        <template m-for:inv:i=µ.invaders>
+            <invader m-style:top="${inv.top}vh" m-style:left="${inv.left}vh" m-style:color="${inv.color}">
+                {{ inv.type }}
+            </invader>
+        </template>
+        <laser m-style:left="${µ.laser.left}vh" />
+    </div>
+
+</body>
+
+<script>
+    class SpaceInvaders extends MC.Controller {
+
+        constructor(element) {
+            super(element)
+            this.model.invaders = []
+            this.model.laser = { left: 40, min: 5, max: 70 }
+            this.width = 100
+            this.vstart = 25
+            this.hstart = 15
+            this.hstep = 0.5
+            this.vstep = 3
+            this.dist = 5 // distance between invaders
+            this.path = 'llllllllllllllllllll' + 'd' + // move pattern to reapeat
+                'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr' + 'd' +
+                'llllllllllllllllllll'
+            this.current = 0    // current invader to move
+            this.mperloop = 11  // move per loop (1 move for on invader)
+            this.colors = { 'E': 'magenta', 'C': 'yellow', 'A': 'red' }
+        }
+        init() {
+            const invaders = [];
+            ['E', 'E', 'C', 'C', 'A'].forEach((type, l) => Array(11)
+                .fill(type)
+                .forEach((type, c) => invaders.push({
+                    type,
+                    top: l * this.dist + this.vstart,
+                    left: c * this.dist + this.hstart,
+                    line: l,
+                    col: c,
+                    step: 0,
+                    color: this.colors[type]
+                }))
+            )
+            this.model.invaders = invaders.reverse()
+            setInterval(this.loop.bind(this), 200)
+            setInterval(this.loop2.bind(this), 500)
+        }
+        loop() {
+            // move invaders
+            for (let i = 0; i < this.mperloop; i++) { // make expected move per loop
+                this.move(this.model.invaders[this.current])
+                this.current = (this.current + 1) % this.model.invaders.length
+            }
+        }
+        loop2() {
+            // change invaders shape
+            this.model.invaders.forEach(invader => this.switch(invader))
+        }
+        wheel(event) {
+            const delta = Math.sign(event.deltaY) * 5
+            this.model.laser.left = Math.min(Math.max(this.model.laser.left + delta, this.model.laser.min), this.model.laser.max)
+        }
+        key(event) {
+            switch (event.which) {
+                case 37: // arrow left
+                    this.model.laser.left = Math.max(this.model.laser.left - 2, this.model.laser.min)
+                    break
+                case 39: // arrow right
+                    this.model.laser.left = Math.min(this.model.laser.left + 2, this.model.laser.max)
+                    break
+                case 32: // fire
+                    this.fire()
+                    break
+            }
+        }
+        move(invader) {
+            const move = this.path[invader.step]
+            invader.step = (invader.step + 1) % this.path.length
+            switch (move) {
+                case 'd': invader.top += this.vstep; break;
+                case 'u': invader.top -= this.vstep; break;
+                case 'l': invader.left -= this.hstep; break;
+                case 'r': invader.left += this.hstep; break;
+            }
+        }
+        switch(invader) {
+            invader.type = { 'E': 'F', 'F': 'E', 'C': 'D', 'D': 'C', 'A': 'B', 'B': 'A' }[invader.type]
+        }
+        collision(nodea, nodeb) {
+            const rect1 = a.getBoundingClientRect();
+            const rect2 = b.getBoundingClientRect();
+            if (rect1.bottom > rect2.top) return false
+            if (rect1.top < rect2.bottom) return false
+            if (rect1.left > rect2.right) return false
+            if (rect1.right < rect2.left) return false
+            return true
+        }
+        fire() {
+
+        }
+
+    }
+    window.addEventListener('load', _ => {
+        MControl.register(SpaceInvaders)
+        MControl.start()
+    })
+
+</script>
+
+</html>
