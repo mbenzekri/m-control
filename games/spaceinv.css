@@ -65,3 +65,15 @@ laser {
     bottom: 0;
     color: greenyellow;
 }
+
+bullet::before {
+    content: '|';
+}
+bullet {
+    font-family: 'Space Invaders';
+    font-size: 5mm;
+    position:absolute;
+    top: 0;
+    left: 0 ;
+    color: white;
+}

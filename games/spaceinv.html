@@ -16,7 +16,12 @@
                 {{ inv.type }}
             </invader>
         </template>
-        <laser m-style:left="${µ.laser.left}vh" />
+        <laser m-style:left="${µ.laser.left}vh"></laser>
+        <bullet 
+            m-set:hidden="!µ.bullet.visible" 
+            m-style:left="${µ.bullet.left}vh" 
+            m-style:top="${µ.bullet.top}vh" 
+        ></bullet>
     </div>
 
 </body>
@@ -28,7 +33,8 @@
             super(element)
             this.model.invaders = []
             this.model.laser = { left: 40, min: 5, max: 70 }
-            this.width = 100
+            this.model.bullet = { left: 40, top: this.width, visible:false }
+            this.width = 80
             this.vstart = 25
             this.hstart = 15
             this.hstep = 0.5
@@ -64,6 +70,10 @@
             for (let i = 0; i < this.mperloop; i++) { // make expected move per loop
                 this.move(this.model.invaders[this.current])
                 this.current = (this.current + 1) % this.model.invaders.length
+            }
+            if (this.model.bullet.visible) {
+                this.model.bullet.top-=5
+                if (this.model.bullet.top < 0) this.model.bullet.visible = false
             }
         }
         loop2() {
@@ -110,7 +120,10 @@
             return true
         }
         fire() {
-
+            if (this.model.bullet.visible) return
+            this.model.bullet.visible = true
+            this.model.bullet.top = this.width
+            this.model.bullet.left = this.model.laser.left+1.5
         }
 
     }
