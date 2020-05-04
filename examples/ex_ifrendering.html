@@ -1,0 +1,73 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="./index.css" crossorigin="anonymous">
+    <script src="../m-control.js"></script>
+    <script src="./m-example.js"></script>
+</head>
+
+<body class="pure mg-1">
+
+    <h1>Conditional rendering
+        <hr>
+    </h1>
+
+    <p> Use m-if modifier to manage condiational rendering of node subtree.
+        the attribute value is the boolean expression to render or not
+        the corresponding node subtree
+        <pre>m-if="µ.visible" </pre>
+        <pre>m-if="(µ.person.name === 'Tac')" </pre>
+    </p>
+    <p style="background-color:peachpuff;">
+        <strong>IMPORTANT: m-if node subtree is inserted or removed from document depending  
+          on the boolean expression not just hidden</strong><br>
+    </p>
+    <p> If you want just a hidding behavior use m-set/m-bing with 'hidden' property.</p>
+  
+    <fieldset m-control="MCtrlExample">
+        <legend>The demo :</legend>
+        <input m-on:click="this.code()" type=button value="see code">
+        <div>
+            <p>
+                <label>Choose which to display : </label>
+                <select m-bind:value=µ.choice>
+                    <option value="first">first</option>
+                    <option value="second" selected>second</option>
+                    <option value="both">both</option>
+                    <option value="none">none</option>
+                </select>
+            </p>
+
+            <template m-if="(µ.choice == 'first' || µ.choice == 'both' )" >
+                <div>
+                    Hi i am first !
+                </div>
+            </template>
+
+            <template m-if="(µ.choice == 'second' || µ.choice == 'both' )" >
+                <div>
+                    Hi i am second !
+                </div>
+            </template>
+        </div>
+        <script>
+            class MCtrlExample extends MC.Controller {
+                constructor() {
+                    super()
+                    this.model.choice = 'first'
+                }
+            }
+            window.addEventListener('load', _ => {
+                MControl.register(MCtrlExample)
+                MControl.start()
+            })
+        </script>
+    </fieldset>
+
+</body>
+
+
+</html>

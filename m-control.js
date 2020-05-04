@@ -322,7 +322,7 @@
             var fragment = document.importNode(template.content, true);
             previous.after(fragment)
             const newnode = previous.nextElementSibling
-            this.$setScope(newnode, scope)
+            if (scope) this.$setScope(newnode, scope)
             this.$build(newnode)
             return newnode
         }
@@ -347,6 +347,7 @@
     function quote(text) {
         return text.replace(/'/g,"\\'")
     }
+    let MODIFIERID = 1
     const compile = {
         'm-ref': (ctrl, elem, attr) => {
             ctrl.refs[attr.value] = elem;
@@ -361,7 +362,7 @@
                     Object.keys(_value_).forEach(classname =>
                         _value_[classname]  ? $node.classList.add(classname) : $node.classList.remove(classname)
                     ) 
-                //@ sourceURL=m-class-${attr.value}.js
+                //@ sourceURL=m-class-${MODIFIERID++}.js
             `
             const params = ['$node', '$attr', 'µ', body]
             return params
@@ -374,6 +375,7 @@
                 const _stylevalue_ = \`${attr.value}\`;
                 if (MC.debug) console.log('m-style rendering %s = %s',_styleprop_,_stylevalue_);
                 $node.style[_styleprop_] = _stylevalue_;
+                //@ sourceURL=m-style-${MODIFIERID++}.js
             `
             return ['$node', '$attr', 'µ', body]
         },
@@ -385,6 +387,7 @@
                 ${scope}
                 if (MC.debug) console.log("m-on rendering event=\${$event.name} handler=  ${attr.value.replace('\"', '\'')}");
                 ${attr.value}
+                //@ sourceURL=m-on-${MODIFIERID++}.js
             `
             try {
                 const func = new Function('$event', body).bind(ctrl)
@@ -402,6 +405,7 @@
                 try {
                 $text.textContent = \`${text.textContent.replace(/{{/g, '${').replace(/}}/g, '}')}\`;
                 } catch(e){}
+                //@ sourceURL=m-get-${MODIFIERID++}.js
             `
             return ['$node', '$text', 'µ', body]
         },
@@ -425,6 +429,7 @@
                     console.log("input => model with %s=%s input=%s",'${quote(proppath)}',JSON.stringify(${proppath}), _value_)
                 }
                 ${proppath} = _value_
+                //@ sourceURL=m-get-${MODIFIERID++}.js
             `
             try {
                 const func = new Function('$event', body).bind(ctrl)
@@ -446,6 +451,7 @@
                     '${quote(proppath)}', JSON.stringify(${proppath}),
                     $node.type,'${quote(attrname)}',$node['${attrname}'])
                 $node['${attrname}'] = ${proppath}
+                //@ sourceURL=m-set-${MODIFIERID++}.js
             `
             return ['$node', '$attr', 'µ', body]
         },
@@ -459,6 +465,7 @@
             const fragment = `
                 if (MC.debug) console.log(\`scope ${varname} = \${JSON.stringify(${proppath})}\`)
                 let ${varname} = ${proppath};
+                //@ sourceURL=m-with-${MODIFIERID++}.js
             `
             if (!elem.$rscope) elem.$rscope = []
             if (!elem.$lscope) elem.$lscope = {}
@@ -471,6 +478,24 @@
          * @param {HTMLElement} elem 
          * @param {Attr} attr 
          */
+        'm-if': function (ctrl, template, attr) {
+            const boolexpr = attr.textContent
+            const rscope = ctrl.$rightscopes(attr)
+            const body = rscope + `
+                const _bool_ = ${boolexpr}
+                if (MC.debug) console.log( "m-if rendering bool=%s",_bool_ ? 'true' : 'false')
+                // initial or array ref change render all array
+                if (!_bool_ && $node.$ifnode) { // remove if node block
+                    $node.parentElement.removeChild($node.$ifnode)
+                    $node.$ifnode = null
+                }
+                if (_bool_ && !$node.$ifnode) { // add if node block
+                    $node.$ifnode = this.$addNode($node,$node)
+                }
+                //@ sourceURL=m-if-${MODIFIERID++}.js
+            `
+            return ['$node', '$attr', 'µ', '$path', '$version', body]
+        },
         'm-for': function (ctrl, template, attr) {
             const arraypath = attr.textContent
             const rscope = ctrl.$rightscopes(attr)
@@ -518,7 +543,7 @@
                 //         $node.$tail = _newnode_
                 //     }
                 //}
-                //@ sourceURL=array_listener_${arraypath}.js
+                //@ sourceURL=m-for-${MODIFIERID++}.js
             `
             return ['$node', '$attr', 'µ', '$path', '$version', body]
         }
